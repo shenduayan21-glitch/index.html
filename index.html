@@ -27,15 +27,15 @@
     <div class="w-full max-w-sm text-center">
       <div class="text-4xl mb-2">⚡</div>
       <h1 class="text-2xl font-bold text-gray-900">Pro Scan Billing</h1>
-      <p class="text-sm text-gray-500 mb-6">Login ya ₹100 Monthly Recharge</p>
+      <p class="text-sm text-gray-500 mb-6">Login / Access Plan</p>
 
       <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4 text-left">
-        <p class="text-xs font-semibold text-blue-800 uppercase">Access Key</p>
-        <h2 class="text-xl font-bold text-blue-900">Admin Key: Ayan@786786</h2>
-        <p class="text-xs text-blue-600 mt-1">Single click login for full access</p>
+        <p class="text-xs font-semibold text-blue-800 uppercase">Current Key</p>
+        <h2 class="text-xl font-bold text-blue-900">Ayan@786786</h2>
+        <p class="text-xs text-blue-600 mt-1">Direct Unlimited Admin Access</p>
       </div>
 
-      <input id="input-license" type="text" placeholder="License Key (Ayan@786786)" 
+      <input id="input-license" type="text" placeholder="License Key" 
              value="Ayan@786786"
              class="w-full p-3 border rounded-xl mb-3 text-center uppercase tracking-wider font-semibold focus:outline-none focus:ring-2 focus:ring-blue-600" />
       
@@ -43,16 +43,7 @@
         🚀 Dukan Login Karein
       </button>
 
-      <div class="relative my-4">
-        <div class="absolute inset-0 flex items-center"><div class="w-full border-t border-gray-200"></div></div>
-        <div class="relative flex justify-center text-xs uppercase"><span class="bg-white px-2 text-gray-400">Recharge</span></div>
-      </div>
-
-      <input id="sub-phone" type="tel" placeholder="Mobile Number (10 Digit)" class="w-full p-3 border rounded-xl mb-3 text-center" />
-      <button onclick="paySubscription()" class="w-full bg-green-600 text-white font-bold py-3 rounded-xl shadow-lg active:scale-95 transition">
-        💳 Pay ₹100 via UPI
-      </button>
-      <p id="auth-msg" class="text-xs text-red-500 mt-3"></p>
+      <p id="auth-msg" class="text-xs text-red-500 mt-2"></p>
     </div>
   </div>
 
@@ -73,7 +64,7 @@
       </div>
 
       <div class="w-full mt-2 flex gap-1">
-        <input id="quick-barcode" type="text" placeholder="Barcode number ya code daalein..." 
+        <input id="quick-barcode" type="text" placeholder="Barcode code daalein aur Add karein..." 
                class="flex-1 px-3 py-1.5 bg-gray-800 text-white text-xs rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500"
                onkeypress="if(event.key==='Enter') addByManualCode()" />
         <button onclick="addByManualCode()" class="bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold active:scale-95">
@@ -85,21 +76,21 @@
     <!-- Scanned Cart Items -->
     <div class="flex-1 overflow-y-auto p-3 space-y-2" id="cart-container">
       <div id="empty-cart-msg" class="text-center text-gray-400 mt-10 text-sm">
-        Koi samaan add nahi hua.<br>Camera scan karein ya code likhein!
+        Koi samaan add nahi hua.<br>Camera se scan karein ya code likhein!
       </div>
     </div>
 
-    <!-- Total Bar -->
+    <!-- Total Bar & Action Buttons -->
     <div class="bg-white border-t border-gray-200 p-3 shadow-lg flex-shrink-0">
       <div class="flex justify-between items-baseline mb-2">
         <span class="text-xs uppercase text-gray-500 font-bold tracking-wide">Total Bill:</span>
         <span id="grand-total" class="text-2xl font-black text-gray-900">₹0.00</span>
       </div>
       <div class="grid grid-cols-2 gap-2">
-        <button onclick="checkout('Cash')" class="bg-emerald-600 active:scale-95 transition text-white py-3 rounded-xl font-bold flex justify-center items-center gap-1 shadow">
+        <button id="btn-cash" onclick="checkout('Cash')" class="bg-emerald-600 active:scale-95 transition text-white py-3 rounded-xl font-bold flex justify-center items-center gap-1 shadow">
           💵 Cash
         </button>
-        <button onclick="openPaymentQR()" class="bg-blue-600 active:scale-95 transition text-white py-3 rounded-xl font-bold flex justify-center items-center gap-1 shadow">
+        <button id="btn-upi" onclick="openPaymentQR()" class="bg-blue-600 active:scale-95 transition text-white py-3 rounded-xl font-bold flex justify-center items-center gap-1 shadow">
           📱 GPay / UPI QR
         </button>
       </div>
@@ -117,7 +108,6 @@
       </button>
     </div>
 
-    <!-- Camera Viewport for Inventory -->
     <div id="inv-reader-box" class="w-full bg-slate-900 rounded-2xl p-2 mb-3 hidden flex flex-col items-center">
       <div id="inv-reader" class="w-full max-w-xs rounded-xl overflow-hidden"></div>
       <p class="text-[11px] text-gray-300 mt-1">Barcode frame me layein (Auto fill ho jayega)</p>
@@ -126,13 +116,11 @@
     <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 mb-4 space-y-3">
       <div>
         <label class="text-xs text-gray-500 font-semibold">Barcode / Item Code</label>
-        <div class="flex gap-2 mt-1">
-          <input id="inv-code" type="text" placeholder="Scan ya Type Karein" class="flex-1 p-2.5 border rounded-xl text-sm" onblur="checkAutoFillDetails()" />
-        </div>
+        <input id="inv-code" type="text" placeholder="Scan ya Type Karein" class="w-full p-2.5 border rounded-xl mt-1 text-sm" onblur="checkAutoFillDetails()" />
       </div>
       <div>
         <label class="text-xs text-gray-500 font-semibold">Samaan Ka Naam</label>
-        <input id="inv-name" type="text" placeholder="Jaise: Soap, Oil, Lights" class="w-full p-2.5 border rounded-xl mt-1 text-sm" />
+        <input id="inv-name" type="text" placeholder="Jaise: Soap, Oil, Rice" class="w-full p-2.5 border rounded-xl mt-1 text-sm" />
       </div>
       <div class="grid grid-cols-2 gap-2">
         <div>
@@ -141,7 +129,7 @@
         </div>
         <div>
           <label class="text-xs text-gray-500 font-semibold">Stock Qty (Pcs)</label>
-          <input id="inv-qty" type="number" placeholder="Kitna piece hai" class="w-full p-2.5 border rounded-xl mt-1 text-sm" />
+          <input id="inv-qty" type="number" placeholder="Pieces" class="w-full p-2.5 border rounded-xl mt-1 text-sm" />
         </div>
       </div>
       <button onclick="saveProduct()" class="w-full bg-blue-600 text-white font-bold py-3 rounded-xl active:scale-95 transition shadow">
@@ -202,7 +190,7 @@
     <div class="bg-white rounded-2xl p-6 w-72 text-center shadow-2xl">
       <h3 class="font-bold text-gray-800 text-base mb-1">GPay / PhonePe / Paytm</h3>
       <p class="text-xs text-gray-500 mb-3">Customer se scan karwayein</p>
-      <div id="upi-qrcode" class="flex justify-center p-2 bg-gray-50 rounded-xl mb-3 border"></div>
+      <div id="upi-qrcode" class="flex justify-center p-2 bg-gray-50 rounded-xl mb-3 border min-h-[170px] items-center"></div>
       <div class="text-2xl font-black text-gray-900 mb-4" id="qr-amount-txt">₹0.00</div>
       <button onclick="checkout('GPay / UPI')" class="w-full bg-emerald-600 text-white font-bold py-3 rounded-xl shadow active:scale-95 transition text-sm">
         ✅ Payment Mil Gayi
@@ -246,7 +234,7 @@
     </div>
   </div>
 
-  <!-- 🔢 EDIT QUANTITY MODAL -->
+  <!-- 🔢 QUANTITY MODAL -->
   <div id="qty-modal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 hidden">
     <div class="bg-white rounded-2xl p-5 w-64 text-center shadow-xl">
       <h3 class="font-bold text-gray-800 mb-1" id="qty-item-name">Product</h3>
@@ -279,7 +267,12 @@
   <script>
     const SUPABASE_URL = "https://uzdikxqqvonclngagqzde5.supabase.co"; 
     const SUPABASE_KEY = "sb_publishable_91o8zHQkH-C5j_y4MQa-YQ_mmnjBn_V"; 
-    const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    let db = null;
+    try {
+      db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    } catch (e) {
+      console.error("Supabase init error", e);
+    }
 
     let currentClientKey = localStorage.getItem("pro_client_key") || "Ayan@786786";
     let profileData = JSON.parse(localStorage.getItem("cached_profile") || "null") || {
@@ -317,15 +310,6 @@
       syncFromCloud();
     }
 
-    function paySubscription() {
-      const phone = document.getElementById("sub-phone").value.trim();
-      if (!phone || phone.length < 10) {
-        alert("10 digit mobile number daalein");
-        return;
-      }
-      window.location.href = `upi://pay?pa=shenduayan21-2@okhdfcbank&pn=ProScanBilling&am=100&cu=INR&tn=Monthly_Sub_${phone}`;
-    }
-
     function logout() {
       localStorage.clear();
       location.reload();
@@ -338,21 +322,22 @@
     }
 
     async function syncFromCloud() {
+      if (!db) return;
       try {
-        const { data: prof } = await db.table("store_profile").select("*").eq("client_key", currentClientKey).single();
+        const { data: prof } = await db.from("store_profile").select("*").eq("client_key", currentClientKey).maybeSingle();
         if (prof) {
           profileData = prof;
           localStorage.setItem("cached_profile", JSON.stringify(prof));
           populateProfileInputs();
         }
-        const { data: inv } = await db.table("inventory").select("*").eq("client_key", currentClientKey);
+        const { data: inv } = await db.from("inventory").select("*").eq("client_key", currentClientKey);
         if (inv) {
           inventory = inv;
           localStorage.setItem("cached_inventory", JSON.stringify(inv));
           renderProductList();
         }
       } catch (err) {
-        console.log("Offline mode or sync check");
+        console.log("Offline mode or sync check", err);
       }
     }
 
@@ -379,7 +364,9 @@
       };
       profileData = payload;
       localStorage.setItem("cached_profile", JSON.stringify(payload));
-      await db.table("store_profile").upsert(payload, { onConflict: "client_key" });
+      if (db) {
+        await db.from("store_profile").upsert(payload, { onConflict: "client_key" });
+      }
       
       const st = document.getElementById("profile-status");
       st.innerText = "✅ Profile Saved!";
@@ -414,7 +401,7 @@
         btn.innerText = "⏹ Camera Band Karein";
         btn.className = "bg-red-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow active:scale-95";
       } catch (err) {
-        alert("Camera permission allow karein.");
+        alert("Camera permission allow karein ya mobile settings me camera on karein.");
         btn.innerText = "📷 Camera Chalu Karein";
         isBillingCamRunning = false;
       }
@@ -449,7 +436,7 @@
           (decodedText) => {
             document.getElementById("inv-code").value = decodedText.trim();
             checkAutoFillDetails();
-            toggleInvCamera(); // auto stop after scan
+            toggleInvCamera();
           }
         );
         isInvCamRunning = true;
@@ -497,7 +484,7 @@
       const stockAvailable = parseFloat(product["Quantity"]) || 0;
 
       if (stockAvailable > 0 && currentInCart >= stockAvailable) {
-        alert(`Stock khatam! Is samaan ka sirf ${stockAvailable} piece bacha hai.`);
+        alert(`Stock limit reached! Sirf ${stockAvailable} piece bacha hai.`);
         return;
       }
 
@@ -506,7 +493,6 @@
       renderCart();
     }
 
-    // --- INVENTORY MANAGEMENT (QTY & BALANCE) ---
     async function saveProduct() {
       const code = document.getElementById("inv-code").value.trim();
       const name = document.getElementById("inv-name").value.trim();
@@ -536,7 +522,9 @@
       document.getElementById("inv-price").value = "";
       document.getElementById("inv-qty").value = "";
 
-      await db.table("inventory").upsert(newItem, { onConflict: "client_key,Item Code" });
+      if (db) {
+        await db.from("inventory").upsert(newItem, { onConflict: "client_key,Item Code" });
+      }
       alert("Samaan aur Stock save ho gaya!");
     }
 
@@ -567,12 +555,11 @@
       }).join("");
     }
 
-    // --- CART & BILLING ---
     function renderCart() {
       const container = document.getElementById("cart-container");
       const codes = Object.keys(cart);
       if (codes.length === 0) {
-        container.innerHTML = `<div class="text-center text-gray-400 mt-10 text-sm">Koi samaan add nahi hua.<br>Camera scan karein ya code likhein!</div>`;
+        container.innerHTML = `<div class="text-center text-gray-400 mt-10 text-sm">Koi samaan add nahi hua.<br>Camera se scan karein ya code likhein!</div>`;
         document.getElementById("grand-total").innerText = "₹0.00";
         return;
       }
@@ -633,19 +620,14 @@
       document.getElementById("qty-modal").classList.add("hidden");
     }
 
-    // --- PAYMENT, RECEIPT & STOCK DEDUCTION ---
+    // --- PAYMENT, RECEIPT & STOCK UPDATE ---
     function openPaymentQR() {
       const codes = Object.keys(cart);
       if (codes.length === 0) {
-        alert("Cart khali hai!");
+        alert("⚠️ Pehle koi samaan add karein! Cart abhi khali hai.");
         return;
       }
-      const upiId = profileData.upi_id;
-      if (!upiId) {
-        alert("Settings/Profile me jaakar apni UPI ID bharein!");
-        switchTab('settings');
-        return;
-      }
+      const upiId = profileData.upi_id || "shenduayan21-2@okhdfcbank";
       let total = 0;
       codes.forEach(c => total += cart[c].price * cart[c].qty);
       
@@ -653,12 +635,16 @@
       
       const qrBox = document.getElementById("upi-qrcode");
       qrBox.innerHTML = "";
-      new QRCode(qrBox, {
-        text: upiString,
-        width: 170,
-        height: 170,
-        correctLevel: QRCode.CorrectLevel.M
-      });
+      try {
+        new QRCode(qrBox, {
+          text: upiString,
+          width: 170,
+          height: 170,
+          correctLevel: QRCode.CorrectLevel.M
+        });
+      } catch(e) {
+        qrBox.innerHTML = `<a href="${upiString}" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-xs font-bold">Tap To Pay UPI</a>`;
+      }
 
       document.getElementById("qr-amount-txt").innerText = `₹${total.toFixed(2)}`;
       document.getElementById("qr-modal").classList.remove("hidden");
@@ -671,7 +657,10 @@
     async function checkout(mode) {
       closeQRModal();
       const codes = Object.keys(cart);
-      if (codes.length === 0) return;
+      if (codes.length === 0) {
+        alert("⚠️ Pehle koi samaan add karein! Cart abhi khali hai.");
+        return;
+      }
 
       const totalAmount = document.getElementById("grand-total").innerText;
       const invNo = "INV-" + Math.floor(100000 + Math.random() * 900000);
@@ -686,10 +675,11 @@
           const updatedQty = Math.max(0, currentQty - soldQty);
           prod["Quantity"] = updatedQty;
 
-          // update cloud in background
-          db.table("inventory").update({ "Quantity": updatedQty })
-            .eq("client_key", currentClientKey)
-            .eq("Item Code", code).then();
+          if (db) {
+            db.from("inventory").update({ "Quantity": updatedQty })
+              .eq("client_key", currentClientKey)
+              .eq("Item Code", code).then();
+          }
         }
       }
       localStorage.setItem("cached_inventory", JSON.stringify(inventory));
