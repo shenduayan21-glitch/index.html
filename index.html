@@ -5,99 +5,87 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Pro Scan POS</title>
   
-  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Core Libraries -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
   <style>
-    body { -webkit-tap-highlight-color: transparent; }
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f3f4f6; color: #1f2937; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+    
+    .btn { display: inline-flex; align-items: center; justify-content: center; font-weight: 700; border-radius: 12px; cursor: pointer; border: none; transition: transform 0.1s; }
+    .btn:active { transform: scale(0.96); }
+    .btn-blue { background: #2563eb; color: white; }
+    .btn-green { background: #059669; color: white; }
+    .btn-red { background: #dc2626; color: white; }
+    .btn-gray { background: #374151; color: white; }
+
+    input, textarea { width: 100%; padding: 10px 14px; border: 1px solid #d1d5db; border-radius: 10px; font-size: 14px; outline: none; background: #fff; }
+    input:focus, textarea:focus { border-color: #2563eb; ring: 2px solid #93c5fd; }
+
+    .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.65); z-index: 999; display: flex; align-items: center; justify-content: center; padding: 16px; }
+    .modal-box { background: #fff; border-radius: 20px; width: 100%; max-width: 360px; overflow: hidden; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2); }
+
     @media print {
       body * { visibility: hidden; }
       #printable-receipt, #printable-receipt * { visibility: visible; }
-      #printable-receipt {
-        position: absolute;
-        left: 0;
-        top: 0;
-        width: 100%;
-        margin: 0;
-        padding: 10px;
-      }
+      #printable-receipt { position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 12px; }
     }
   </style>
 </head>
-<body class="bg-gray-100 text-gray-800 font-sans h-screen flex flex-col justify-between select-none">
+<body>
 
-  <!-- 🔒 LOGIN / ID MODAL -->
-  <div id="auth-modal" class="fixed inset-0 bg-white z-50 flex flex-col justify-center items-center p-6 hidden">
-    <div class="w-full max-w-sm text-center">
-      <div class="text-4xl mb-2">⚡</div>
-      <h1 class="text-2xl font-bold text-gray-900">Pro Scan Billing</h1>
-      <p class="text-sm text-gray-500 mb-6">Store Access ID Login</p>
-
-      <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4 text-left">
-        <p class="text-xs font-semibold text-blue-800 uppercase">Master Admin ID</p>
-        <h2 class="text-xl font-bold text-blue-900">Ayan@786786</h2>
-        <p class="text-xs text-blue-600 mt-1">Direct Unlimited Cloud Access</p>
-      </div>
-
-      <input id="input-license" type="text" placeholder="Enter Store ID" 
-             value="Ayan@786786"
-             class="w-full p-3 border rounded-xl mb-3 text-center uppercase tracking-wider font-semibold focus:outline-none focus:ring-2 focus:ring-blue-600" />
-      
-      <button onclick="loginWithKey()" class="w-full bg-blue-600 text-white font-bold py-3 rounded-xl mb-3 shadow-lg active:scale-95 transition">
-        🚀 Dukan Login Karein
-      </button>
-
-      <p id="auth-msg" class="text-xs text-red-500 mt-2"></p>
-    </div>
-  </div>
+  <!-- Live Debug Toast (Agar koi code error ho toh turant upar dikhega) -->
+  <div id="debug-toast" style="display: none; background: #ef4444; color: white; font-size: 11px; padding: 6px; text-align: center; position: fixed; top: 0; left: 0; right: 0; z-index: 9999;"></div>
 
   <!-- ==================================================== -->
   <!-- 🏠 TAB 1: BILLING COUNTER                            -->
   <!-- ==================================================== -->
-  <div id="tab-billing" class="flex-1 flex flex-col overflow-hidden">
-    <div class="relative w-full bg-slate-900 flex-shrink-0 flex flex-col items-center justify-center p-2 min-h-[160px]">
-      <div id="billing-reader" class="w-full max-w-xs rounded-xl overflow-hidden shadow-inner"></div>
+  <div id="tab-billing" style="display: flex; flex-direction: column; flex: 1; overflow: hidden;">
+    
+    <!-- Camera Scanner Viewport -->
+    <div style="background: #0f172a; padding: 10px; flex-shrink: 0; display: flex; flex-direction: column; align-items: center;">
+      <div id="billing-reader" style="width: 100%; max-width: 300px; border-radius: 12px; overflow: hidden; background: #000;"></div>
       
-      <div class="w-full flex justify-between items-center px-2 mt-1">
-        <button id="btn-toggle-cam-bill" onclick="toggleBillingCamera()" class="bg-blue-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow active:scale-95">
+      <div style="width: 100%; display: flex; justify-content: space-between; align-items: center; margin-top: 8px;">
+        <button id="btn-toggle-cam-bill" onclick="toggleBillingCamera()" class="btn btn-blue" style="padding: 6px 14px; font-size: 12px;">
           📷 Camera Chalu Karein
         </button>
-        <button onclick="refreshLocalCache()" class="bg-gray-800 text-gray-200 text-xs px-2.5 py-1.5 rounded-lg border border-gray-700">
+        <button onclick="syncStock()" class="btn btn-gray" style="padding: 6px 12px; font-size: 11px;">
           🔄 Sync Stock
         </button>
       </div>
 
-      <div class="w-full mt-2 flex gap-1">
-        <input id="quick-barcode" type="text" placeholder="Barcode code daalein..." 
-               class="flex-1 px-3 py-1.5 bg-gray-800 text-white text-xs rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500"
+      <!-- Quick Manual Barcode Input -->
+      <div style="width: 100%; display: flex; gap: 6px; margin-top: 8px;">
+        <input id="quick-barcode" type="text" placeholder="Barcode code daalein ya type karein..." 
+               style="background: #1e293b; color: white; border: 1px solid #334155; padding: 8px 12px; font-size: 13px;"
                onkeypress="if(event.key==='Enter') addByManualCode()" />
-        <button onclick="addByManualCode()" class="bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold active:scale-95">
+        <button onclick="addByManualCode()" class="btn btn-green" style="padding: 8px 16px; font-size: 13px;">
           + Add
         </button>
       </div>
     </div>
 
-    <!-- Cart items -->
-    <div class="flex-1 overflow-y-auto p-3 space-y-2" id="cart-container">
-      <div id="empty-cart-msg" class="text-center text-gray-400 mt-10 text-sm">
+    <!-- Scanned Cart List -->
+    <div id="cart-container" style="flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 8px;">
+      <div id="empty-cart-msg" style="text-align: center; color: #9ca3af; margin-top: 40px; font-size: 14px;">
         Koi samaan add nahi hua.<br>Camera se scan karein ya code likhein!
       </div>
     </div>
 
-    <!-- Total and Checkouts -->
-    <div class="bg-white border-t border-gray-200 p-3 shadow-lg flex-shrink-0">
-      <div class="flex justify-between items-baseline mb-2">
-        <span class="text-xs uppercase text-gray-500 font-bold tracking-wide">TOTAL AMOUNT:</span>
-        <span id="grand-total" class="text-2xl font-black text-gray-900">₹0.00</span>
+    <!-- Total Bill Footer -->
+    <div style="background: white; border-top: 1px solid #e5e7eb; padding: 12px 16px; flex-shrink: 0; box-shadow: 0 -4px 6px -1px rgba(0,0,0,0.05);">
+      <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px;">
+        <span style="font-size: 12px; font-weight: 700; color: #6b7280; text-transform: uppercase;">TOTAL AMOUNT:</span>
+        <span id="grand-total" style="font-size: 26px; font-weight: 900; color: #111827;">₹0.00</span>
       </div>
-      <div class="grid grid-cols-2 gap-2">
-        <button onclick="checkout('Cash')" class="bg-emerald-600 active:scale-95 transition text-white py-3 rounded-xl font-bold flex justify-center items-center gap-1 shadow">
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+        <button onclick="handleCheckout('Cash')" class="btn btn-green" style="padding: 12px; font-size: 16px;">
           💵 Cash
         </button>
-        <button onclick="openPaymentQR()" class="bg-blue-600 active:scale-95 transition text-white py-3 rounded-xl font-bold flex justify-center items-center gap-1 shadow">
+        <button onclick="openPaymentQR()" class="btn btn-blue" style="padding: 12px; font-size: 16px;">
           📱 GPay / UPI QR
         </button>
       </div>
@@ -107,227 +95,242 @@
   <!-- ==================================================== -->
   <!-- 📦 TAB 2: INVENTORY & STOCK                          -->
   <!-- ==================================================== -->
-  <div id="tab-products" class="flex-1 flex flex-col p-4 overflow-y-auto hidden">
-    <div class="flex justify-between items-center mb-3">
-      <h2 class="text-xl font-bold text-gray-900">📦 Samaan & Stock</h2>
-      <button onclick="toggleInvCamera()" id="btn-toggle-cam-inv" class="bg-indigo-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow active:scale-95 flex items-center gap-1">
+  <div id="tab-products" style="display: none; flex-direction: column; flex: 1; overflow-y: auto; padding: 16px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+      <h2 style="font-size: 18px; font-weight: 800;">📦 Samaan & Stock</h2>
+      <button id="btn-toggle-cam-inv" onclick="toggleInvCamera()" class="btn btn-blue" style="padding: 6px 12px; font-size: 12px;">
         📷 Scan Barcode
       </button>
     </div>
 
-    <div id="inv-reader-box" class="w-full bg-slate-900 rounded-2xl p-2 mb-3 hidden flex flex-col items-center">
-      <div id="inv-reader" class="w-full max-w-xs rounded-xl overflow-hidden"></div>
-      <p class="text-[11px] text-gray-300 mt-1">Barcode frame me layein</p>
+    <div id="inv-reader-box" style="display: none; background: #0f172a; border-radius: 12px; padding: 8px; margin-bottom: 12px; text-align: center;">
+      <div id="inv-reader" style="width: 100%; max-width: 280px; margin: 0 auto; border-radius: 8px; overflow: hidden;"></div>
+      <p style="color: #cbd5e1; font-size: 11px; margin-top: 6px;">Barcode frame me layein (Auto-detect ho jayega)</p>
     </div>
 
-    <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 mb-4 space-y-3">
+    <div style="background: white; border: 1px solid #e5e7eb; border-radius: 16px; padding: 14px; margin-bottom: 16px; display: flex; flex-direction: column; gap: 10px;">
       <div>
-        <label class="text-xs text-gray-500 font-semibold">Barcode / Item Code</label>
-        <input id="inv-code" type="text" placeholder="Scan ya Type Karein" class="w-full p-2.5 border rounded-xl mt-1 text-sm" onblur="checkAutoFillDetails()" />
+        <label style="font-size: 11px; font-weight: 700; color: #6b7280;">Barcode / Item Code</label>
+        <input id="inv-code" type="text" placeholder="Scan ya Type Karein" onblur="checkAutoFillDetails()" style="margin-top: 4px;" />
       </div>
       <div>
-        <label class="text-xs text-gray-500 font-semibold">Samaan Ka Naam</label>
-        <input id="inv-name" type="text" placeholder="Item Name" class="w-full p-2.5 border rounded-xl mt-1 text-sm" />
+        <label style="font-size: 11px; font-weight: 700; color: #6b7280;">Samaan Ka Naam</label>
+        <input id="inv-name" type="text" placeholder="Jaise: Soap, Milk, Oil" style="margin-top: 4px;" />
       </div>
-      <div class="grid grid-cols-2 gap-2">
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
         <div>
-          <label class="text-xs text-gray-500 font-semibold">Rate (₹)</label>
-          <input id="inv-price" type="number" placeholder="Selling Price" class="w-full p-2.5 border rounded-xl mt-1 text-sm" />
+          <label style="font-size: 11px; font-weight: 700; color: #6b7280;">Rate (₹)</label>
+          <input id="inv-price" type="number" placeholder="Selling Daam" style="margin-top: 4px;" />
         </div>
         <div>
-          <label class="text-xs text-gray-500 font-semibold">Stock Qty</label>
-          <input id="inv-qty" type="number" placeholder="Pieces" class="w-full p-2.5 border rounded-xl mt-1 text-sm" />
+          <label style="font-size: 11px; font-weight: 700; color: #6b7280;">Stock Qty (Pcs)</label>
+          <input id="inv-qty" type="number" placeholder="Total Pieces" style="margin-top: 4px;" />
         </div>
       </div>
-      <button onclick="saveProduct()" class="w-full bg-blue-600 text-white font-bold py-3 rounded-xl active:scale-95 transition shadow">
+      <button onclick="saveProduct()" class="btn btn-blue" style="padding: 12px; font-size: 14px; margin-top: 4px;">
         💾 Save Samaan & Stock
       </button>
     </div>
 
-    <h3 class="text-sm font-bold text-gray-700 mb-2">Saved Samaan & Balance Stock</h3>
-    <div id="product-list-container" class="space-y-2 flex-1"></div>
+    <h3 style="font-size: 13px; font-weight: 700; color: #4b5563; margin-bottom: 8px;">Available Samaan & Stock</h3>
+    <div id="product-list-container" style="display: flex; flex-direction: column; gap: 8px; flex: 1;"></div>
   </div>
 
   <!-- ==================================================== -->
-  <!-- ⚙️ TAB 3: PROFILE SETUP                              -->
+  <!-- ⚙️ TAB 3: STORE PROFILE SETUP                       -->
   <!-- ==================================================== -->
-  <div id="tab-settings" class="flex-1 flex flex-col p-4 overflow-y-auto hidden">
-    <h2 class="text-xl font-bold text-gray-900 mb-3">🏪 Dukan Profile Setup</h2>
+  <div id="tab-settings" style="display: none; flex-direction: column; flex: 1; overflow-y: auto; padding: 16px;">
+    <h2 style="font-size: 18px; font-weight: 800; margin-bottom: 12px;">🏪 Dukan Profile Setup</h2>
     
-    <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 mb-4 space-y-3">
+    <div style="background: white; border: 1px solid #e5e7eb; border-radius: 16px; padding: 14px; margin-bottom: 16px; display: flex; flex-direction: column; gap: 10px;">
       <div>
-        <label class="text-xs text-gray-500 font-semibold">Dukan Ka Naam</label>
-        <input id="prof-store" type="text" placeholder="STORE NAME" class="w-full p-2.5 border rounded-xl mt-1 text-sm" />
+        <label style="font-size: 11px; font-weight: 700; color: #6b7280;">Dukan Ka Naam</label>
+        <input id="prof-store" type="text" placeholder="DIZETECH SHOP" style="margin-top: 4px;" />
       </div>
       <div>
-        <label class="text-xs text-gray-500 font-semibold">GSTIN Number (Optional)</label>
-        <input id="prof-gstin" type="text" placeholder="GSTIN : 33A123456789" class="w-full p-2.5 border rounded-xl mt-1 text-sm" />
+        <label style="font-size: 11px; font-weight: 700; color: #6b7280;">GSTIN (Optional)</label>
+        <input id="prof-gstin" type="text" placeholder="33A123456789" style="margin-top: 4px;" />
       </div>
       <div>
-        <label class="text-xs text-gray-500 font-semibold">Dukan Ka Pata (Address)</label>
-        <textarea id="prof-address" rows="2" placeholder="Full Address" class="w-full p-2.5 border rounded-xl mt-1 text-sm"></textarea>
+        <label style="font-size: 11px; font-weight: 700; color: #6b7280;">Dukan Ka Pata (Address)</label>
+        <textarea id="prof-address" rows="2" placeholder="No. 22, Main road, Kumar nagar" style="margin-top: 4px;"></textarea>
       </div>
       <div>
-        <label class="text-xs text-gray-500 font-semibold">Phone Number</label>
-        <input id="prof-phone" type="tel" placeholder="Mobile Number" class="w-full p-2.5 border rounded-xl mt-1 text-sm" />
+        <label style="font-size: 11px; font-weight: 700; color: #6b7280;">Phone Number</label>
+        <input id="prof-phone" type="tel" placeholder="63820 62807" style="margin-top: 4px;" />
       </div>
       <div>
-        <label class="text-xs text-gray-500 font-semibold">UPI ID (QR Payment Ke Liye)</label>
-        <input id="prof-upi" type="text" placeholder="shenduayan21-2@okhdfcbank" class="w-full p-2.5 border rounded-xl mt-1 text-sm" />
+        <label style="font-size: 11px; font-weight: 700; color: #6b7280;">UPI ID (GPay / Paytm QR Code Ke Liye)</label>
+        <input id="prof-upi" type="text" placeholder="shenduayan21-2@okhdfcbank" style="margin-top: 4px;" />
       </div>
 
-      <button onclick="saveStoreProfile()" class="w-full bg-blue-600 text-white font-bold py-3 rounded-xl shadow active:scale-95 transition">
+      <button onclick="saveStoreProfile()" class="btn btn-blue" style="padding: 12px; font-size: 14px; margin-top: 4px;">
         💾 Save Profile Details
       </button>
-      <p id="profile-status" class="text-xs text-green-600 text-center font-semibold mt-1"></p>
+      <p id="profile-status" style="font-size: 12px; color: #059669; text-align: center; font-weight: 700; min-height: 16px;"></p>
     </div>
 
-    <div class="bg-slate-900 text-white p-4 rounded-2xl shadow-md mb-4">
-      <div class="text-xs text-gray-400 uppercase font-semibold">Login Status</div>
-      <div class="text-base font-bold mt-1" id="license-expiry-txt">Checking...</div>
+    <div style="background: #0f172a; color: white; padding: 14px; border-radius: 14px; margin-bottom: 16px;">
+      <div style="font-size: 11px; color: #94a3b8; text-transform: uppercase; font-weight: 700;">Account Mode</div>
+      <div id="license-expiry-txt" style="font-size: 15px; font-weight: 800; margin-top: 2px;">Admin (Lifetime Sync)</div>
     </div>
-
-    <button onclick="logout()" class="w-full border border-red-300 text-red-600 font-semibold py-2.5 rounded-xl mb-6 active:bg-red-50">
-      🚪 Switch Store / Logout
-    </button>
   </div>
 
-  <!-- 📱 DYNAMIC UPI QR MODAL -->
-  <div id="qr-modal" class="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4 hidden">
-    <div class="bg-white rounded-2xl p-6 w-72 text-center shadow-2xl">
-      <h3 class="font-bold text-gray-800 text-base mb-1">GPay / PhonePe / Paytm</h3>
-      <p class="text-xs text-gray-500 mb-3">Customer se scan karwayein</p>
-      <div id="upi-qrcode" class="flex justify-center p-2 bg-gray-50 rounded-xl mb-3 border min-h-[170px] items-center"></div>
-      <div class="text-2xl font-black text-gray-900 mb-4" id="qr-amount-txt">₹0.00</div>
-      <button onclick="checkout('GPay / UPI')" class="w-full bg-emerald-600 text-white font-bold py-3 rounded-xl shadow active:scale-95 transition text-sm">
+  <!-- ==================================================== -->
+  <!-- 📱 DYNAMIC UPI QR MODAL                              -->
+  <!-- ==================================================== -->
+  <div id="qr-modal" class="modal-backdrop" style="display: none;">
+    <div class="modal-box" style="padding: 20px; text-align: center;">
+      <h3 style="font-size: 16px; font-weight: 800;">GPay / PhonePe / Paytm</h3>
+      <p style="font-size: 12px; color: #6b7280; margin-bottom: 12px;">Customer se scan karwayein</p>
+      <div id="upi-qrcode" style="display: flex; justify-content: center; align-items: center; min-height: 160px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 12px; padding: 8px; margin-bottom: 12px;"></div>
+      <div id="qr-amount-txt" style="font-size: 24px; font-weight: 900; margin-bottom: 14px;">₹0.00</div>
+      <button onclick="handleCheckout('GPay / UPI')" class="btn btn-green" style="width: 100%; padding: 12px; font-size: 14px;">
         ✅ Payment Mil Gayi
       </button>
-      <button onclick="closeQRModal()" class="w-full text-xs text-gray-400 font-semibold mt-3">
+      <button onclick="closeModal('qr-modal')" class="btn" style="width: 100%; margin-top: 8px; color: #9ca3af; font-size: 13px; background: none;">
         Cancel
       </button>
     </div>
   </div>
 
   <!-- ==================================================== -->
-  <!-- 🧾 EXACT RECEIPT MODAL (AS IN SCREENSHOT)            -->
+  <!-- 🧾 EXACT RECEIPT MODAL (SCREENSHOT DESIGN)           -->
   <!-- ==================================================== -->
-  <div id="receipt-modal" class="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-3 hidden">
-    <div class="bg-white w-full max-w-sm rounded-2xl overflow-hidden shadow-2xl flex flex-col max-h-[92vh]">
+  <div id="receipt-modal" class="modal-backdrop" style="display: none;">
+    <div class="modal-box" style="max-height: 92vh; display: flex; flex-direction: column;">
       
-      <!-- Receipt View Area -->
-      <div id="printable-receipt" class="p-6 overflow-y-auto bg-white text-gray-800 font-sans text-xs">
-        <!-- Header -->
-        <div class="text-center pb-3">
-          <h2 class="text-xl font-black uppercase tracking-wide" id="rec-store-name">DIZETECH SHOP</h2>
-          <p id="rec-store-gstin" class="text-[11px] text-gray-600 font-medium mt-0.5">GSTIN : 33A123456789</p>
-          <p id="rec-store-address" class="text-[11px] text-gray-600 mt-0.5 leading-tight">No. 22, Main road, Kumar nagar</p>
-          <p id="rec-store-phone" class="text-[11px] text-gray-600 mt-0.5">PH : 63820 62807</p>
+      <!-- Receipt Printable Paper -->
+      <div id="printable-receipt" style="padding: 24px 20px; overflow-y: auto; background: white; font-size: 12px; color: #1f2937;">
+        
+        <!-- Header Center -->
+        <div style="text-align: center; padding-bottom: 10px;">
+          <h2 id="rec-store-name" style="font-size: 20px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.5px;">DIZETECH SHOP</h2>
+          <p id="rec-store-gstin" style="font-size: 11px; color: #4b5563; font-weight: 600; margin-top: 2px;">GSTIN : 33A123456789</p>
+          <p id="rec-store-address" style="font-size: 11px; color: #4b5563; margin-top: 2px; line-height: 1.3;">No. 22, Main road, Kumar nagar</p>
+          <p id="rec-store-phone" style="font-size: 11px; color: #4b5563; margin-top: 2px;">PH : 63820 62807</p>
         </div>
 
-        <div class="border-b border-gray-300 my-2"></div>
+        <div style="border-bottom: 1px solid #d1d5db; margin: 8px 0;"></div>
 
-        <!-- Meta Line -->
-        <div class="flex justify-between text-[11px] font-semibold text-gray-700 py-1">
+        <!-- Meta info line -->
+        <div style="display: flex; justify-content: space-between; font-size: 11px; font-weight: 700; color: #374151; padding: 2px 0;">
           <span id="rec-invoice-no">Bill: #3111104</span>
           <span id="rec-date-time">22-Jul-26 15:08</span>
         </div>
 
-        <div class="border-b border-gray-300 my-2"></div>
+        <div style="border-bottom: 1px solid #d1d5db; margin: 8px 0;"></div>
 
-        <!-- Table Columns Header -->
-        <div class="grid grid-cols-12 text-[11px] font-bold text-gray-900 pb-1.5 border-b border-gray-200">
-          <span class="col-span-6">Item</span>
-          <span class="col-span-2 text-center">Qty</span>
-          <span class="col-span-2 text-right">Rate</span>
-          <span class="col-span-2 text-right">Amount</span>
+        <!-- Exact 4-Column Table Header -->
+        <div style="display: grid; grid-template-columns: 5fr 2fr 2fr 3fr; font-size: 11px; font-weight: 800; padding-bottom: 6px; border-bottom: 1px solid #e5e7eb;">
+          <span>Item</span>
+          <span style="text-align: center;">Qty</span>
+          <span style="text-align: right;">Rate</span>
+          <span style="text-align: right;">Amount</span>
         </div>
 
-        <!-- Item Rows -->
-        <div class="py-2 space-y-2 border-b border-gray-200 text-[11px]" id="rec-items-list">
-          <!-- Dynamically populated -->
+        <!-- Scanned Items List -->
+        <div id="rec-items-list" style="padding: 8px 0; display: flex; flex-direction: column; gap: 8px; border-bottom: 1px solid #e5e7eb; font-size: 11px;"></div>
+
+        <!-- Total Amount Row -->
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0;">
+          <span style="font-size: 14px; font-weight: 900; text-transform: uppercase;">TOTAL AMOUNT</span>
+          <span id="rec-total-amount" style="font-size: 18px; font-weight: 900;">₹0.00</span>
         </div>
 
-        <!-- Total Area -->
-        <div class="flex justify-between items-center py-2.5">
-          <span class="font-black text-sm uppercase tracking-wide">TOTAL AMOUNT</span>
-          <span id="rec-total-amount" class="text-lg font-black text-gray-900">₹0.00</span>
+        <div style="font-size: 11px; color: #4b5563; font-style: italic; padding-bottom: 6px;">
+          <span id="rec-pay-mode">Payment Mode: Cash | Counter 1</span>
         </div>
 
-        <div class="text-[11px] text-gray-600 italic pb-2">
-          <span id="rec-pay-mode">Payment Mode: Cash</span>
-        </div>
+        <div style="border-bottom: 1px solid #d1d5db; margin: 8px 0;"></div>
 
-        <div class="border-b border-gray-300 my-2"></div>
-
-        <!-- Footer Notice -->
-        <div class="text-center pt-2 space-y-1 text-[11px] text-gray-600">
-          <p class="text-[10px] text-gray-500">Terms & Conditions: Goods once sold will not be taken back.</p>
-          <p class="font-bold text-gray-800 tracking-wider">*** THANK YOU ***</p>
-          <p class="font-bold text-gray-800 tracking-wider">*** VISIT AGAIN ***</p>
+        <!-- Thermal Footer -->
+        <div style="text-align: center; padding-top: 6px; font-size: 10px; color: #4b5563; line-height: 1.5;">
+          <p>Terms & Conditions: Goods once sold will not be taken back.</p>
+          <p style="font-weight: 800; color: #111827; margin-top: 4px; letter-spacing: 1px;">*** THANK YOU ***</p>
+          <p style="font-weight: 800; color: #111827; letter-spacing: 1px;">*** VISIT AGAIN ***</p>
         </div>
       </div>
 
-      <!-- Footer Buttons -->
-      <div class="p-3 bg-gray-50 border-t grid grid-cols-2 gap-3">
-        <button onclick="closeReceipt()" class="bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-2.5 rounded-xl text-xs active:scale-95 flex items-center justify-center gap-1 border">
+      <!-- Action Buttons (Exact layout as screenshot) -->
+      <div style="padding: 12px; background: #f9fafb; border-top: 1px solid #e5e7eb; display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+        <button onclick="closeReceipt()" class="btn" style="background: #e5e7eb; color: #1f2937; padding: 10px; font-size: 13px;">
           ← Back
         </button>
-        <button onclick="printReceipt()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-xl text-xs active:scale-95 flex items-center justify-center gap-1 shadow">
+        <button onclick="window.print()" class="btn btn-blue" style="padding: 10px; font-size: 13px;">
           🖨️ Print
         </button>
       </div>
     </div>
   </div>
 
-  <!-- 🔢 QUANTITY MODAL -->
-  <div id="qty-modal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 hidden">
-    <div class="bg-white rounded-2xl p-5 w-64 text-center shadow-xl">
-      <h3 class="font-bold text-gray-800 mb-1" id="qty-item-name">Product</h3>
-      <p class="text-xs text-gray-400 mb-4">Quantity Badhayein / Ghatayein</p>
-      <div class="flex items-center justify-center gap-4 mb-5">
-        <button onclick="changeQty(-1)" class="w-10 h-10 rounded-full bg-gray-100 font-bold text-xl active:bg-gray-200">-</button>
-        <span id="qty-value" class="text-2xl font-bold text-gray-900 w-8">1</span>
-        <button onclick="changeQty(1)" class="w-10 h-10 rounded-full bg-gray-100 font-bold text-xl active:bg-gray-200">+</button>
+  <!-- ==================================================== -->
+  <!-- 🔢 QUANTITY EDIT MODAL                               -->
+  <!-- ==================================================== -->
+  <div id="qty-modal" class="modal-backdrop" style="display: none;">
+    <div class="modal-box" style="padding: 20px; text-align: center; max-width: 280px;">
+      <h3 id="qty-item-name" style="font-size: 16px; font-weight: 800;">Product</h3>
+      <p style="font-size: 11px; color: #9ca3af; margin-bottom: 14px;">Quantity Badhayein / Ghatayein</p>
+      <div style="display: flex; justify-content: center; align-items: center; gap: 16px; margin-bottom: 16px;">
+        <button onclick="changeQty(-1)" class="btn btn-gray" style="width: 40px; height: 40px; font-size: 20px; border-radius: 50%;">-</button>
+        <span id="qty-value" style="font-size: 24px; font-weight: 900; width: 40px;">1</span>
+        <button onclick="changeQty(1)" class="btn btn-gray" style="width: 40px; height: 40px; font-size: 20px; border-radius: 50%;">+</button>
       </div>
-      <button onclick="saveQtyChange()" class="w-full bg-blue-600 text-white font-bold py-2 rounded-xl text-sm">
+      <button onclick="saveQtyChange()" class="btn btn-blue" style="width: 100%; padding: 10px; font-size: 13px;">
         Ho Gaya
       </button>
     </div>
   </div>
 
-  <!-- 📱 BOTTOM NAVIGATION TABS -->
-  <nav class="bg-white border-t border-gray-200 flex justify-around p-2.5 shadow-md flex-shrink-0 z-10">
-    <button onclick="switchTab('billing')" id="nav-billing" class="flex flex-col items-center text-blue-600 font-bold text-xs py-1 px-4 active:scale-95">
-      <span class="text-xl">🛒</span> Bill
+  <!-- ==================================================== -->
+  <!-- 📱 BOTTOM NAVIGATION TABS                            -->
+  <!-- ==================================================== -->
+  <nav style="background: white; border-top: 1px solid #e5e7eb; display: flex; justify-content: space-around; padding: 8px 0; flex-shrink: 0;">
+    <button onclick="switchTab('billing')" id="nav-billing" style="display: flex; flex-direction: column; align-items: center; background: none; border: none; color: #2563eb; font-weight: 800; font-size: 11px; cursor: pointer;">
+      <span style="font-size: 20px;">🛒</span> Bill
     </button>
-    <button onclick="switchTab('products')" id="nav-products" class="flex flex-col items-center text-gray-400 font-medium text-xs py-1 px-4 active:scale-95">
-      <span class="text-xl">📦</span> Samaan
+    <button onclick="switchTab('products')" id="nav-products" style="display: flex; flex-direction: column; align-items: center; background: none; border: none; color: #9ca3af; font-weight: 600; font-size: 11px; cursor: pointer;">
+      <span style="font-size: 20px;">📦</span> Samaan
     </button>
-    <button onclick="switchTab('settings')" id="nav-settings" class="flex flex-col items-center text-gray-400 font-medium text-xs py-1 px-4 active:scale-95">
-      <span class="text-xl">⚙️</span> Profile
+    <button onclick="switchTab('settings')" id="nav-settings" style="display: flex; flex-direction: column; align-items: center; background: none; border: none; color: #9ca3af; font-weight: 600; font-size: 11px; cursor: pointer;">
+      <span style="font-size: 20px;">⚙️</span> Profile
     </button>
   </nav>
 
-  <!-- ⚙️ FULL JAVASCRIPT ENGINE -->
+  <!-- ==================================================== -->
+  <!-- ⚙️ BULLETPROOF JAVASCRIPT ENGINE                     -->
+  <!-- ==================================================== -->
   <script>
+    // Global Error Catcher taaki browser me silent crash na ho
+    window.onerror = function(msg, url, line) {
+      const d = document.getElementById("debug-toast");
+      if(d) {
+        d.style.display = "block";
+        d.innerText = "Error (Line " + line + "): " + msg;
+      }
+      return false;
+    };
+
     const SUPABASE_URL = "https://uzdikxqqvonclngagqzde5.supabase.co"; 
     const SUPABASE_KEY = "sb_publishable_91o8zHQkH-C5j_y4MQa-YQ_mmnjBn_V"; 
     let db = null;
     try {
-      db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+      if (window.supabase) {
+        db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+      }
     } catch (e) {
-      console.error("Supabase init error", e);
+      console.warn("Supabase init offline fallback", e);
     }
 
-    let currentClientKey = localStorage.getItem("pro_client_key") || "Ayan@786786";
-    let profileData = JSON.parse(localStorage.getItem("cached_profile_" + currentClientKey) || "null") || {
+    const currentClientKey = "Ayan@786786";
+    let profileData = JSON.parse(localStorage.getItem("cached_profile") || "null") || {
       store_name: "DIZETECH SHOP", 
       gstin: "33A123456789", 
       address: "No. 22, Main road, Kumar nagar", 
       phone: "63820 62807", 
       upi_id: "shenduayan21-2@okhdfcbank"
     };
-    let inventory = JSON.parse(localStorage.getItem("cached_inventory_" + currentClientKey) || "[]");
+    let inventory = JSON.parse(localStorage.getItem("cached_inventory") || "[]");
     let cart = {};
     let editingCode = null;
     let billingScanner = null;
@@ -335,69 +338,34 @@
     let isBillingCamRunning = false;
     let isInvCamRunning = false;
 
-    async function checkAuth() {
-      if (!currentClientKey) {
-        showAuthModal();
-        return;
-      }
-      document.getElementById("license-expiry-txt").innerText = "Logged in: " + currentClientKey;
-      initializeRuntime();
+    // --- TAB SWITCHING (Pure JS) ---
+    function switchTab(tabId) {
+      if (tabId !== 'billing' && isBillingCamRunning) toggleBillingCamera();
+      if (tabId !== 'products' && isInvCamRunning) toggleInvCamera();
+
+      ['billing', 'products', 'settings'].forEach(function(t) {
+        document.getElementById('tab-' + t).style.display = 'none';
+        const nav = document.getElementById('nav-' + t);
+        nav.style.color = '#9ca3af';
+        nav.style.fontWeight = '600';
+      });
+
+      document.getElementById('tab-' + tabId).style.display = 'flex';
+      const activeNav = document.getElementById('nav-' + tabId);
+      activeNav.style.color = '#2563eb';
+      activeNav.style.fontWeight = '800';
     }
 
-    function showAuthModal(msg = "") {
-      document.getElementById("auth-modal").classList.remove("hidden");
-      if (msg) document.getElementById("auth-msg").innerText = msg;
+    function closeModal(id) {
+      document.getElementById(id).style.display = 'none';
     }
 
-    async function loginWithKey() {
-      const key = document.getElementById("input-license").value.trim();
-      if (!key) return;
-      currentClientKey = key;
-      localStorage.setItem("pro_client_key", key);
-      document.getElementById("auth-modal").classList.add("hidden");
-      
-      // Load store data specific to this ID
-      inventory = JSON.parse(localStorage.getItem("cached_inventory_" + currentClientKey) || "[]");
-      profileData = JSON.parse(localStorage.getItem("cached_profile_" + currentClientKey) || "null") || profileData;
-      
-      initializeRuntime();
-      await syncFromCloud();
-    }
-
-    function logout() {
-      // Don't clear inventory data, only reset active login session
-      localStorage.removeItem("pro_client_key");
-      location.reload();
-    }
-
-    function initializeRuntime() {
-      renderProductList();
+    // --- INITIALIZATION ---
+    function initApp() {
       populateProfileInputs();
-      syncFromCloud();
-    }
-
-    async function syncFromCloud() {
-      if (!db || !currentClientKey) return;
-      try {
-        const { data: prof } = await db.from("store_profile").select("*").eq("client_key", currentClientKey).maybeSingle();
-        if (prof) {
-          profileData = prof;
-          localStorage.setItem("cached_profile_" + currentClientKey, JSON.stringify(prof));
-          populateProfileInputs();
-        }
-        const { data: inv } = await db.from("inventory").select("*").eq("client_key", currentClientKey);
-        if (inv) {
-          inventory = inv;
-          localStorage.setItem("cached_inventory_" + currentClientKey, JSON.stringify(inv));
-          renderProductList();
-        }
-      } catch (err) {
-        console.log("Offline mode or sync delay", err);
-      }
-    }
-
-    function refreshLocalCache() {
-      syncFromCloud().then(() => alert("Stock list synced from cloud!"));
+      renderProductList();
+      renderCart();
+      syncStock();
     }
 
     function populateProfileInputs() {
@@ -408,9 +376,398 @@
       document.getElementById("prof-upi").value = profileData.upi_id || "shenduayan21-2@okhdfcbank";
     }
 
-    async function saveStoreProfile() {
-      const payload = {
-        client_key: currentClientKey,
-        store_name: document.getElementById("prof-store").value.trim(),
+    function saveStoreProfile() {
+      profileData = {
+        store_name: document.getElementById("prof-store").value.trim() || "DIZETECH SHOP",
         gstin: document.getElementById("prof-gstin").value.trim(),
-        
+        address: document.getElementById("prof-address").value.trim(),
+        phone: document.getElementById("prof-phone").value.trim(),
+        upi_id: document.getElementById("prof-upi").value.trim() || "shenduayan21-2@okhdfcbank"
+      };
+      localStorage.setItem("cached_profile", JSON.stringify(profileData));
+      
+      if (db) {
+        db.from("store_profile").upsert({
+          client_key: currentClientKey,
+          ...profileData
+        }, { onConflict: "client_key" }).then();
+      }
+
+      const st = document.getElementById("profile-status");
+      st.innerText = "✅ Profile Saved!";
+      setTimeout(function() { st.innerText = ""; }, 2500);
+    }
+
+    async function syncStock() {
+      if (!db) return;
+      try {
+        const resProf = await db.from("store_profile").select("*").eq("client_key", currentClientKey).maybeSingle();
+        if (resProf.data) {
+          profileData = resProf.data;
+          localStorage.setItem("cached_profile", JSON.stringify(profileData));
+          populateProfileInputs();
+        }
+
+        const resInv = await db.from("inventory").select("*").eq("client_key", currentClientKey);
+        if (resInv.data) {
+          inventory = resInv.data;
+          localStorage.setItem("cached_inventory", JSON.stringify(inventory));
+          renderProductList();
+        }
+      } catch(e) {
+        console.log("Offline mode active");
+      }
+    }
+
+    // --- SCANNER FUNCTIONS ---
+    async function toggleBillingCamera() {
+      const btn = document.getElementById("btn-toggle-cam-bill");
+      if (isBillingCamRunning) {
+        if (billingScanner) {
+          await billingScanner.stop();
+          billingScanner.clear();
+        }
+        isBillingCamRunning = false;
+        btn.innerText = "📷 Camera Chalu Karein";
+        btn.className = "btn btn-blue";
+        return;
+      }
+
+      btn.innerText = "⏳ Starting...";
+      try {
+        billingScanner = new Html5Qrcode("billing-reader");
+        await billingScanner.start(
+          { facingMode: "environment" },
+          { fps: 15, qrbox: { width: 220, height: 130 } },
+          function(decodedText) {
+            handleScannedCode(decodedText);
+          }
+        );
+        isBillingCamRunning = true;
+        btn.innerText = "⏹ Camera Band Karein";
+        btn.className = "btn btn-red";
+      } catch (err) {
+        alert("Camera start nahi ho saka. Mobile settings me camera allow karein.");
+        btn.innerText = "📷 Camera Chalu Karein";
+        btn.className = "btn btn-blue";
+        isBillingCamRunning = false;
+      }
+    }
+
+    async function toggleInvCamera() {
+      const box = document.getElementById("inv-reader-box");
+      const btn = document.getElementById("btn-toggle-cam-inv");
+
+      if (isInvCamRunning) {
+        if (invScanner) {
+          await invScanner.stop();
+          invScanner.clear();
+        }
+        isInvCamRunning = false;
+        box.style.display = "none";
+        btn.innerText = "📷 Scan Barcode";
+        btn.className = "btn btn-blue";
+        return;
+      }
+
+      box.style.display = "block";
+      btn.innerText = "⏹ Band Karein";
+      btn.className = "btn btn-red";
+
+      try {
+        invScanner = new Html5Qrcode("inv-reader");
+        await invScanner.start(
+          { facingMode: "environment" },
+          { fps: 15, qrbox: { width: 220, height: 130 } },
+          function(decodedText) {
+            document.getElementById("inv-code").value = decodedText.trim();
+            checkAutoFillDetails();
+            toggleInvCamera();
+          }
+        );
+        isInvCamRunning = true;
+      } catch(err) {
+        alert("Camera permission block hai.");
+        toggleInvCamera();
+      }
+    }
+
+    function checkAutoFillDetails() {
+      const code = document.getElementById("inv-code").value.trim();
+      if (!code) return;
+      const exist = inventory.find(function(i) { return i["Item Code"] === code; });
+      if (exist) {
+        document.getElementById("inv-name").value = exist["Item Name"] || "";
+        document.getElementById("inv-price").value = exist["Price"] || "";
+        document.getElementById("inv-qty").value = exist["Quantity"] || 0;
+      }
+    }
+
+    function handleScannedCode(code) {
+      code = code.trim();
+      const product = inventory.find(function(p) { return p["Item Code"] === code; });
+      if (product) {
+        addToCart(product);
+      }
+    }
+
+    function addByManualCode() {
+      const input = document.getElementById("quick-barcode");
+      const code = input.value.trim();
+      if (!code) return;
+      const product = inventory.find(function(p) { return p["Item Code"] === code; });
+      if (product) {
+        addToCart(product);
+        input.value = "";
+      } else {
+        alert("Yeh barcode inventory me nahi mila! Pehle 'Samaan' tab me save karein.");
+      }
+    }
+
+    function addToCart(product) {
+      const code = product["Item Code"];
+      const inCart = cart[code] ? cart[code].qty : 0;
+      const maxStock = parseFloat(product["Quantity"]) || 0;
+
+      if (maxStock > 0 && inCart >= maxStock) {
+        alert("Stock limit! Dukan me sirf " + maxStock + " piece uplabdh hai.");
+        return;
+      }
+
+      if (cart[code]) cart[code].qty += 1;
+      else cart[code] = { name: product["Item Name"], price: parseFloat(product["Price"]), qty: 1 };
+      renderCart();
+    }
+
+    // --- INVENTORY MANAGEMENT ---
+    function saveProduct() {
+      const code = document.getElementById("inv-code").value.trim();
+      const name = document.getElementById("inv-name").value.trim();
+      const price = parseFloat(document.getElementById("inv-price").value) || 0;
+      const qty = parseFloat(document.getElementById("inv-qty").value) || 0;
+
+      if (!code || !name || price <= 0) {
+        alert("Barcode, Samaan Ka Naam aur Price bharein!");
+        return;
+      }
+
+      const item = {
+        client_key: currentClientKey,
+        "Item Code": code,
+        "Item Name": name,
+        "Price": price,
+        "Quantity": qty
+      };
+
+      const idx = inventory.findIndex(function(i) { return i["Item Code"] === code; });
+      if (idx >= 0) inventory[idx] = item;
+      else inventory.push(item);
+
+      localStorage.setItem("cached_inventory", JSON.stringify(inventory));
+      renderProductList();
+
+      document.getElementById("inv-code").value = "";
+      document.getElementById("inv-name").value = "";
+      document.getElementById("inv-price").value = "";
+      document.getElementById("inv-qty").value = "";
+
+      if (db) {
+        db.from("inventory").upsert(item, { onConflict: "client_key,Item Code" }).then();
+      }
+      alert("Samaan & Stock save ho gaya!");
+    }
+
+    function renderProductList() {
+      const container = document.getElementById("product-list-container");
+      if (inventory.length === 0) {
+        container.innerHTML = '<div style="text-align:center; color:#9ca3af; font-size:12px; padding:20px;">Koi samaan add nahi hua hai.</div>';
+        return;
+      }
+
+      container.innerHTML = inventory.map(function(item) {
+        const qty = parseFloat(item["Quantity"]) || 0;
+        const color = qty <= 3 ? "#ef4444" : "#059669";
+        const bg = qty <= 3 ? "#fee2e2" : "#d1fae5";
+
+        return `
+          <div style="background:white; padding:12px; border-radius:12px; border:1px solid #e5e7eb; display:flex; justify-content:space-between; align-items:center;">
+            <div>
+              <p style="font-weight:700; font-size:14px;">${item["Item Name"]}</p>
+              <div style="display:flex; gap:8px; align-items:center; margin-top:3px;">
+                <span style="font-size:11px; color:#9ca3af;">Code: ${item["Item Code"]}</span>
+                <span style="font-size:10px; font-weight:700; color:${color}; background:${bg}; padding:1px 6px; border-radius:10px;">Stock: ${qty} pcs</span>
+              </div>
+            </div>
+            <span style="font-size:15px; font-weight:900;">₹${parseFloat(item["Price"]).toFixed(2)}</span>
+          </div>
+        `;
+      }).join("");
+    }
+
+    // --- CART & BILLING ---
+    function renderCart() {
+      const container = document.getElementById("cart-container");
+      const codes = Object.keys(cart);
+
+      if (codes.length === 0) {
+        container.innerHTML = `
+          <div id="empty-cart-msg" style="text-align:center; color:#9ca3af; margin-top:40px; font-size:14px;">
+            Koi samaan add nahi hua.<br>Camera se scan karein ya code likhein!
+          </div>
+        `;
+        document.getElementById("grand-total").innerText = "₹0.00";
+        return;
+      }
+
+      let total = 0;
+      container.innerHTML = codes.map(function(code) {
+        const item = cart[code];
+        const subtotal = item.price * item.qty;
+        total += subtotal;
+
+        return `
+          <div style="background:white; padding:12px; border-radius:14px; border:1px solid #e5e7eb; display:flex; justify-content:space-between; align-items:center; box-shadow:0 1px 2px rgba(0,0,0,0.05);">
+            <div>
+              <p style="font-weight:800; font-size:14px;">${item.name}</p>
+              <span onclick="openQtyModal('${code}')" style="display:inline-block; margin-top:3px; background:#eff6ff; color:#2563eb; font-size:11px; font-weight:700; padding:2px 8px; border-radius:6px; cursor:pointer;">
+                ${item.qty} pcs @ ₹${item.price.toFixed(2)} ✏️
+              </span>
+            </div>
+            <div style="display:flex; align-items:center; gap:12px;">
+              <span style="font-weight:900; font-size:15px;">₹${subtotal.toFixed(2)}</span>
+              <button onclick="removeFromCart('${code}')" style="background:none; border:none; font-size:16px; cursor:pointer;">🗑️</button>
+            </div>
+          </div>
+        `;
+      }).join("");
+
+      document.getElementById("grand-total").innerText = "₹" + total.toFixed(2);
+    }
+
+    function removeFromCart(code) {
+      delete cart[code];
+      renderCart();
+    }
+
+    function openQtyModal(code) {
+      editingCode = code;
+      document.getElementById("qty-item-name").innerText = cart[code].name;
+      document.getElementById("qty-value").innerText = cart[code].qty;
+      document.getElementById("qty-modal").style.display = "flex";
+    }
+
+    function changeQty(diff) {
+      let val = parseInt(document.getElementById("qty-value").innerText) + diff;
+      if (val < 1) val = 1;
+      document.getElementById("qty-value").innerText = val;
+    }
+
+    function saveQtyChange() {
+      if (editingCode && cart[editingCode]) {
+        cart[editingCode].qty = parseInt(document.getElementById("qty-value").innerText);
+        renderCart();
+      }
+      closeModal("qty-modal");
+    }
+
+    // --- PAYMENT & INVOICE ---
+    function openPaymentQR() {
+      const codes = Object.keys(cart);
+      if (codes.length === 0) {
+        alert("⚠️ Pehle koi samaan add karein! Cart abhi khali hai.");
+        return;
+      }
+
+      let total = 0;
+      codes.forEach(function(c) { total += cart[c].price * cart[c].qty; });
+
+      const upiId = profileData.upi_id || "shenduayan21-2@okhdfcbank";
+      const upiString = "upi://pay?pa=" + upiId + "&pn=" + encodeURIComponent(profileData.store_name) + "&am=" + total.toFixed(2) + "&cu=INR";
+
+      const qrBox = document.getElementById("upi-qrcode");
+      qrBox.innerHTML = "";
+      try {
+        new QRCode(qrBox, {
+          text: upiString,
+          width: 160,
+          height: 160,
+          correctLevel: QRCode.CorrectLevel.M
+        });
+      } catch(e) {
+        qrBox.innerHTML = '<a href="' + upiString + '" class="btn btn-blue" style="padding:10px 14px; font-size:12px;">Open UPI App</a>';
+      }
+
+      document.getElementById("qr-amount-txt").innerText = "₹" + total.toFixed(2);
+      document.getElementById("qr-modal").style.display = "flex";
+    }
+
+    function handleCheckout(mode) {
+      closeModal("qr-modal");
+      const codes = Object.keys(cart);
+      if (codes.length === 0) {
+        alert("⚠️ Pehle koi samaan add karein!");
+        return;
+      }
+
+      const totalAmount = document.getElementById("grand-total").innerText;
+      const invNo = "#" + Math.floor(1000000 + Math.random() * 9000000);
+      
+      const now = new Date();
+      const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+      const dateStr = now.getDate() + "-" + months[now.getMonth()] + "-" + String(now.getFullYear()).slice(-2) + " " + String(now.getHours()).padStart(2, '0') + ":" + String(now.getMinutes()).padStart(2, '0');
+
+      // Deduct stock
+      codes.forEach(function(code) {
+        const prod = inventory.find(function(p) { return p["Item Code"] === code; });
+        if (prod) {
+          const currentQty = parseFloat(prod["Quantity"]) || 0;
+          const updatedQty = Math.max(0, currentQty - cart[code].qty);
+          prod["Quantity"] = updatedQty;
+
+          if (db) {
+            db.from("inventory").update({ "Quantity": updatedQty })
+              .eq("client_key", currentClientKey)
+              .eq("Item Code", code).then();
+          }
+        }
+      });
+      localStorage.setItem("cached_inventory", JSON.stringify(inventory));
+      renderProductList();
+
+      // Render Exact Screenshot Thermal Receipt
+      document.getElementById("rec-store-name").innerText = profileData.store_name || "DIZETECH SHOP";
+      document.getElementById("rec-store-gstin").innerText = profileData.gstin ? "GSTIN : " + profileData.gstin : "";
+      document.getElementById("rec-store-address").innerText = profileData.address || "No. 22, Main road, Kumar nagar";
+      document.getElementById("rec-store-phone").innerText = profileData.phone ? "PH : " + profileData.phone : "";
+      document.getElementById("rec-invoice-no").innerText = "Bill: " + invNo;
+      document.getElementById("rec-date-time").innerText = dateStr;
+      document.getElementById("rec-total-amount").innerText = totalAmount;
+      document.getElementById("rec-pay-mode").innerText = "Payment Mode: " + mode + " | Counter 1";
+
+      document.getElementById("rec-items-list").innerHTML = codes.map(function(c) {
+        const item = cart[c];
+        const amt = (item.price * item.qty).toFixed(2);
+        return `
+          <div style="display:grid; grid-template-columns: 5fr 2fr 2fr 3fr; align-items:start;">
+            <span style="font-weight:600; line-height:1.2;">${item.name}</span>
+            <span style="text-align:center;">${item.qty}</span>
+            <span style="text-align:right;">${item.price.toFixed(2)}</span>
+            <span style="text-align:right; font-weight:700;">${amt}</span>
+          </div>
+        `;
+      }).join("");
+
+      document.getElementById("receipt-modal").style.display = "flex";
+    }
+
+    function closeReceipt() {
+      cart = {};
+      renderCart();
+      closeModal("receipt-modal");
+    }
+
+    // Direct Boot
+    window.addEventListener("DOMContentLoaded", initApp);
+  </script>
+</body>
+</html>
