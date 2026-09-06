@@ -2,33 +2,17 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Pro Scan POS</title>
   
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
   <style>
     body { -webkit-tap-highlight-color: transparent; }
-    #scanner-overlay {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      width: 220px;
-      height: 140px;
-      border: 2px dashed #ffffff;
-      border-radius: 12px;
-      pointer-events: none;
-      box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.45);
-    }
-    #reader video {
-      object-fit: cover !important;
-      border-radius: 0 0 16px 16px;
-    }
     @media print {
       body * { visibility: hidden; }
       #printable-receipt, #printable-receipt * { visibility: visible; }
@@ -36,24 +20,23 @@
     }
   </style>
 </head>
-<body class="bg-gray-100 text-gray-800 font-sans h-screen flex flex-col justify-between overflow-hidden">
+<body class="bg-gray-100 text-gray-800 font-sans h-screen flex flex-col justify-between select-none">
 
-  <!-- ==================================================== -->
-  <!-- 🔒 SUBSCRIPTION / LOGIN MODAL                        -->
-  <!-- ==================================================== -->
+  <!-- 🔒 LOGIN MODAL -->
   <div id="auth-modal" class="fixed inset-0 bg-white z-50 flex flex-col justify-center items-center p-6 hidden">
     <div class="w-full max-w-sm text-center">
       <div class="text-4xl mb-2">⚡</div>
       <h1 class="text-2xl font-bold text-gray-900">Pro Scan Billing</h1>
-      <p class="text-sm text-gray-500 mb-6">Login ya ₹100 Monthly Recharge karein</p>
+      <p class="text-sm text-gray-500 mb-6">Login ya ₹100 Monthly Recharge</p>
 
       <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4 text-left">
-        <p class="text-xs font-semibold text-blue-800 uppercase">Monthly Access Plan</p>
-        <h2 class="text-xl font-bold text-blue-900">₹100 / Mahina (30 Din)</h2>
-        <p class="text-xs text-blue-600 mt-1">Unlimited Camera Barcode Scan & Cloud Sync</p>
+        <p class="text-xs font-semibold text-blue-800 uppercase">Access Key</p>
+        <h2 class="text-xl font-bold text-blue-900">Admin Key: Ayan@786786</h2>
+        <p class="text-xs text-blue-600 mt-1">Single click login for full access</p>
       </div>
 
-      <input id="input-license" type="text" placeholder="License Key (BILL-XXXXXXXX)" 
+      <input id="input-license" type="text" placeholder="License Key (Ayan@786786)" 
+             value="Ayan@786786"
              class="w-full p-3 border rounded-xl mb-3 text-center uppercase tracking-wider font-semibold focus:outline-none focus:ring-2 focus:ring-blue-600" />
       
       <button onclick="loginWithKey()" class="w-full bg-blue-600 text-white font-bold py-3 rounded-xl mb-3 shadow-lg active:scale-95 transition">
@@ -73,36 +56,45 @@
     </div>
   </div>
 
-  <!-- ==================================================== -->
-  <!-- 🏠 TAB 1: BILLING COUNTER                            -->
-  <!-- ==================================================== -->
+  <!-- 🏠 TAB 1: BILLING COUNTER -->
   <div id="tab-billing" class="flex-1 flex flex-col overflow-hidden">
-    <div class="relative w-full h-48 bg-black overflow-hidden flex-shrink-0">
-      <div id="reader" class="w-full h-full"></div>
-      <div id="scanner-overlay"></div>
-      <div class="absolute top-2 left-3 bg-black/60 backdrop-blur-md px-3 py-1 rounded-full text-white text-xs font-medium">
-        ⚡ Scan Frame
+    <div class="relative w-full bg-slate-900 flex-shrink-0 flex flex-col items-center justify-center p-2 min-h-[160px]">
+      <div id="reader" class="w-full max-w-xs rounded-xl overflow-hidden shadow-inner"></div>
+      
+      <div id="camera-ctrl-bar" class="w-full flex justify-between items-center px-2 mt-1">
+        <button id="btn-toggle-cam" onclick="toggleCamera()" class="bg-blue-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow active:scale-95">
+          📷 Camera Chalu Karein
+        </button>
+        <button onclick="refreshLocalCache()" class="bg-gray-800 text-gray-200 text-xs px-2.5 py-1.5 rounded-lg border border-gray-700">
+          🔄 Sync Stock
+        </button>
       </div>
-      <button onclick="refreshLocalCache()" class="absolute top-2 right-3 bg-black/60 backdrop-blur-md px-3 py-1 rounded-full text-white text-xs font-medium">
-        🔄 Sync Stock
-      </button>
+
+      <div class="w-full mt-2 flex gap-1">
+        <input id="quick-barcode" type="text" placeholder="Barcode number ya code daalein..." 
+               class="flex-1 px-3 py-1.5 bg-gray-800 text-white text-xs rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500"
+               onkeypress="if(event.key==='Enter') addByManualCode()" />
+        <button onclick="addByManualCode()" class="bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold active:scale-95">
+          + Add
+        </button>
+      </div>
     </div>
 
     <!-- Scanned Cart Items -->
     <div class="flex-1 overflow-y-auto p-3 space-y-2" id="cart-container">
-      <div id="empty-cart-msg" class="text-center text-gray-400 mt-12 text-sm">
-        Koi samaan scan nahi hua.<br>Camera ke samne barcode layein!
+      <div id="empty-cart-msg" class="text-center text-gray-400 mt-10 text-sm">
+        Koi samaan add nahi hua.<br>Camera scan karein ya code likhein!
       </div>
     </div>
 
-    <!-- Total Bar & Payment -->
+    <!-- Total Bar -->
     <div class="bg-white border-t border-gray-200 p-3 shadow-lg flex-shrink-0">
       <div class="flex justify-between items-baseline mb-2">
-        <span class="text-xs uppercase text-gray-500 font-bold">Total Bill:</span>
+        <span class="text-xs uppercase text-gray-500 font-bold tracking-wide">Total Bill:</span>
         <span id="grand-total" class="text-2xl font-black text-gray-900">₹0.00</span>
       </div>
       <div class="grid grid-cols-2 gap-2">
-        <button onclick="checkout('Cash')" class="bg-green-600 active:scale-95 transition text-white py-3 rounded-xl font-bold flex justify-center items-center gap-1 shadow">
+        <button onclick="checkout('Cash')" class="bg-emerald-600 active:scale-95 transition text-white py-3 rounded-xl font-bold flex justify-center items-center gap-1 shadow">
           💵 Cash
         </button>
         <button onclick="openPaymentQR()" class="bg-blue-600 active:scale-95 transition text-white py-3 rounded-xl font-bold flex justify-center items-center gap-1 shadow">
@@ -112,25 +104,23 @@
     </div>
   </div>
 
-  <!-- ==================================================== -->
-  <!-- 📦 TAB 2: INVENTORY (SAMAAN)                         -->
-  <!-- ==================================================== -->
+  <!-- 📦 TAB 2: INVENTORY -->
   <div id="tab-products" class="flex-1 flex flex-col p-4 overflow-y-auto hidden">
     <h2 class="text-xl font-bold text-gray-900 mb-3">📦 Naya Samaan Add Karein</h2>
     <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 mb-4 space-y-3">
       <div>
         <label class="text-xs text-gray-500 font-semibold">Barcode / Item Code</label>
-        <input id="inv-code" type="text" placeholder="Scan ya Type Karein" class="w-full p-2 border rounded-lg mt-1" />
+        <input id="inv-code" type="text" placeholder="Scan ya Type Karein" class="w-full p-2.5 border rounded-xl mt-1 text-sm" />
       </div>
       <div>
         <label class="text-xs text-gray-500 font-semibold">Samaan Ka Naam</label>
-        <input id="inv-name" type="text" placeholder="Jaise: Surf Excel, Parle-G" class="w-full p-2 border rounded-lg mt-1" />
+        <input id="inv-name" type="text" placeholder="Jaise: Soap, Oil, Lights" class="w-full p-2.5 border rounded-xl mt-1 text-sm" />
       </div>
       <div>
         <label class="text-xs text-gray-500 font-semibold">Selling Price (₹)</label>
-        <input id="inv-price" type="number" placeholder="Bechne Ka Daam" class="w-full p-2 border rounded-lg mt-1" />
+        <input id="inv-price" type="number" placeholder="Daam (₹)" class="w-full p-2.5 border rounded-xl mt-1 text-sm" />
       </div>
-      <button onclick="saveProduct()" class="w-full bg-blue-600 text-white font-bold py-2.5 rounded-xl active:scale-95 transition">
+      <button onclick="saveProduct()" class="w-full bg-blue-600 text-white font-bold py-3 rounded-xl active:scale-95 transition shadow">
         💾 Save Samaan
       </button>
     </div>
@@ -139,76 +129,65 @@
     <div id="product-list-container" class="space-y-2 flex-1"></div>
   </div>
 
-  <!-- ==================================================== -->
-  <!-- ⚙️ TAB 3: PROFILE SETUP                              -->
-  <!-- ==================================================== -->
+  <!-- ⚙️ TAB 3: PROFILE SETUP -->
   <div id="tab-settings" class="flex-1 flex flex-col p-4 overflow-y-auto hidden">
     <h2 class="text-xl font-bold text-gray-900 mb-3">🏪 Dukan Profile Setup</h2>
     
     <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 mb-4 space-y-3">
       <div>
-        <label class="text-xs text-gray-500 font-semibold">Dukan Ka Naam (Store Name)</label>
-        <input id="prof-store" type="text" placeholder="Apni Dukan Ka Naam" class="w-full p-2 border rounded-lg mt-1" />
+        <label class="text-xs text-gray-500 font-semibold">Dukan Ka Naam</label>
+        <input id="prof-store" type="text" placeholder="Apni Dukan Ka Naam" class="w-full p-2.5 border rounded-xl mt-1 text-sm" />
       </div>
       <div>
-        <label class="text-xs text-gray-500 font-semibold">Dukan Ka Pata (Address)</label>
-        <textarea id="prof-address" rows="2" placeholder="Gali, Area, Shahar" class="w-full p-2 border rounded-lg mt-1 text-sm"></textarea>
+        <label class="text-xs text-gray-500 font-semibold">Dukan Ka Pata</label>
+        <textarea id="prof-address" rows="2" placeholder="Gali, Area, Shahar" class="w-full p-2.5 border rounded-xl mt-1 text-sm"></textarea>
       </div>
       <div>
-        <label class="text-xs text-gray-500 font-semibold">Contact Number (Phone)</label>
-        <input id="prof-phone" type="tel" placeholder="Mobile Number" class="w-full p-2 border rounded-lg mt-1" />
+        <label class="text-xs text-gray-500 font-semibold">Phone Number</label>
+        <input id="prof-phone" type="tel" placeholder="Mobile Number" class="w-full p-2.5 border rounded-xl mt-1 text-sm" />
       </div>
       <div>
-        <label class="text-xs text-gray-500 font-semibold">UPI ID (QR Code Payment Ke Liye)</label>
-        <input id="prof-upi" type="text" placeholder="example@okhdfcbank" class="w-full p-2 border rounded-lg mt-1" />
+        <label class="text-xs text-gray-500 font-semibold">UPI ID (QR Code Ke Liye)</label>
+        <input id="prof-upi" type="text" placeholder="shenduayan21-2@okhdfcbank" class="w-full p-2.5 border rounded-xl mt-1 text-sm" />
       </div>
       <div>
         <label class="text-xs text-gray-500 font-semibold">Bill Footer Note</label>
-        <input id="prof-footer" type="text" value="*** DHANYAWAD - PHIR AAYEIN ***" class="w-full p-2 border rounded-lg mt-1 text-xs" />
+        <input id="prof-footer" type="text" value="*** DHANYAWAD - PHIR AAYEIN ***" class="w-full p-2.5 border rounded-xl mt-1 text-xs" />
       </div>
 
-      <button onclick="saveStoreProfile()" class="w-full bg-blue-600 text-white font-bold py-2.5 rounded-xl shadow active:scale-95 transition">
+      <button onclick="saveStoreProfile()" class="w-full bg-blue-600 text-white font-bold py-3 rounded-xl shadow active:scale-95 transition">
         💾 Save Profile Details
       </button>
       <p id="profile-status" class="text-xs text-green-600 text-center font-semibold mt-1"></p>
     </div>
 
-    <!-- Subscription Status Card -->
-    <div class="bg-gradient-to-br from-blue-900 to-indigo-800 text-white p-4 rounded-2xl shadow-md mb-4">
-      <div class="text-xs text-blue-200 uppercase font-semibold">Monthly Validity</div>
-      <div class="text-xl font-bold mt-1" id="license-expiry-txt">30 Din Valid</div>
-      <p class="text-xs text-blue-200 mt-1">₹100/Mahina Subscription</p>
-      <button onclick="showAuthModal()" class="mt-3 bg-white text-blue-900 text-xs font-bold px-3 py-2 rounded-lg">
-        🔄 Recharge (₹100)
-      </button>
+    <div class="bg-slate-900 text-white p-4 rounded-2xl shadow-md mb-4">
+      <div class="text-xs text-gray-400 uppercase font-semibold">Account Status</div>
+      <div class="text-lg font-bold mt-1" id="license-expiry-txt">Admin (Lifetime)</div>
     </div>
 
-    <button onclick="logout()" class="w-full border border-red-200 text-red-600 font-semibold py-2.5 rounded-xl mb-6">
+    <button onclick="logout()" class="w-full border border-red-300 text-red-600 font-semibold py-2.5 rounded-xl mb-6 active:bg-red-50">
       🚪 Logout
     </button>
   </div>
 
-  <!-- ==================================================== -->
-  <!-- 📱 DYNAMIC UPI QR MODAL                              -->
-  <!-- ==================================================== -->
+  <!-- 📱 DYNAMIC UPI QR MODAL -->
   <div id="qr-modal" class="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4 hidden">
     <div class="bg-white rounded-2xl p-6 w-72 text-center shadow-2xl">
       <h3 class="font-bold text-gray-800 text-base mb-1">GPay / PhonePe / Paytm</h3>
       <p class="text-xs text-gray-500 mb-3">Customer se scan karwayein</p>
       <div id="upi-qrcode" class="flex justify-center p-2 bg-gray-50 rounded-xl mb-3 border"></div>
-      <div class="text-xl font-black text-gray-900 mb-4" id="qr-amount-txt">₹0.00</div>
-      <button onclick="checkout('GPay / UPI')" class="w-full bg-green-600 text-white font-bold py-2.5 rounded-xl shadow active:scale-95 transition text-sm">
+      <div class="text-2xl font-black text-gray-900 mb-4" id="qr-amount-txt">₹0.00</div>
+      <button onclick="checkout('GPay / UPI')" class="w-full bg-emerald-600 text-white font-bold py-3 rounded-xl shadow active:scale-95 transition text-sm">
         ✅ Payment Mil Gayi
       </button>
-      <button onclick="closeQRModal()" class="w-full text-xs text-gray-400 font-semibold mt-2">
+      <button onclick="closeQRModal()" class="w-full text-xs text-gray-400 font-semibold mt-3">
         Cancel
       </button>
     </div>
   </div>
 
-  <!-- ==================================================== -->
-  <!-- 🧾 RECEIPT MODAL (THERMAL & PDF)                     -->
-  <!-- ==================================================== -->
+  <!-- 🧾 RECEIPT MODAL -->
   <div id="receipt-modal" class="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4 hidden">
     <div class="bg-white w-full max-w-sm rounded-2xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
       <div id="printable-receipt" class="p-4 overflow-y-auto bg-white text-xs font-mono text-gray-900 space-y-2">
@@ -241,9 +220,7 @@
     </div>
   </div>
 
-  <!-- ==================================================== -->
-  <!-- 🔢 EDIT QUANTITY MODAL (- 3 +)                       -->
-  <!-- ==================================================== -->
+  <!-- 🔢 QUANTITY MODAL -->
   <div id="qty-modal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 hidden">
     <div class="bg-white rounded-2xl p-5 w-64 text-center shadow-xl">
       <h3 class="font-bold text-gray-800 mb-1" id="qty-item-name">Product</h3>
@@ -259,59 +236,42 @@
     </div>
   </div>
 
-  <!-- ==================================================== -->
-  <!-- 📱 BOTTOM NAVIGATION TABS                            -->
-  <!-- ==================================================== -->
-  <nav class="bg-white border-t border-gray-200 flex justify-around p-2 shadow-md flex-shrink-0">
-    <button onclick="switchTab('billing')" id="nav-billing" class="flex flex-col items-center text-blue-600 font-bold text-[11px]">
-      <span class="text-lg">🛒</span> Bill
+  <!-- 📱 BOTTOM NAVIGATION TABS -->
+  <nav class="bg-white border-t border-gray-200 flex justify-around p-2.5 shadow-md flex-shrink-0 z-10">
+    <button onclick="switchTab('billing')" id="nav-billing" class="flex flex-col items-center text-blue-600 font-bold text-xs py-1 px-4 active:scale-95">
+      <span class="text-xl">🛒</span> Bill
     </button>
-    <button onclick="switchTab('products')" id="nav-products" class="flex flex-col items-center text-gray-400 font-medium text-[11px]">
-      <span class="text-lg">📦</span> Samaan
+    <button onclick="switchTab('products')" id="nav-products" class="flex flex-col items-center text-gray-400 font-medium text-xs py-1 px-4 active:scale-95">
+      <span class="text-xl">📦</span> Samaan
     </button>
-    <button onclick="switchTab('settings')" id="nav-settings" class="flex flex-col items-center text-gray-400 font-medium text-[11px]">
-      <span class="text-lg">⚙️</span> Profile
+    <button onclick="switchTab('settings')" id="nav-settings" class="flex flex-col items-center text-gray-400 font-medium text-xs py-1 px-4 active:scale-95">
+      <span class="text-xl">⚙️</span> Profile
     </button>
   </nav>
 
-  <!-- ==================================================== -->
-  <!-- ⚙️ SCRIPT LOGIC (CACHE-FIRST ENGINE)                 -->
-  <!-- ==================================================== -->
+  <!-- ⚙️ FULL JAVASCRIPT ENGINE -->
   <script>
-    // Apne credentials check kar lein
     const SUPABASE_URL = "https://uzdikxqqvonclngagqzde5.supabase.co"; 
-    const SUPABASE_KEY = "AAPKI_SUPABASE_ANON_KEY"; 
+    const SUPABASE_KEY = "sb_publishable_91o8zHQkH-C5j_y4MQa-YQ_mmnjBn_V"; 
     const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    const beepAudio = new Audio("https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3");
-
-    let currentClientKey = localStorage.getItem("pro_client_key") || "";
+    let currentClientKey = localStorage.getItem("pro_client_key") || "Ayan@786786";
     let profileData = JSON.parse(localStorage.getItem("cached_profile") || "null") || {
-      store_name: "MY STORE", address: "", phone: "", upi_id: "", footer: "*** DHANYAWAD - PHIR AAYEIN ***"
+      store_name: "MY STORE", address: "", phone: "", upi_id: "shenduayan21-2@okhdfcbank", footer: "*** DHANYAWAD - PHIR AAYEIN ***"
     };
     let inventory = JSON.parse(localStorage.getItem("cached_inventory") || "[]");
     let cart = {};
     let editingCode = null;
     let html5QrCode = null;
+    let isCameraRunning = false;
 
-    // --- 1. AUTH & SUBSCRIPTION ---
     async function checkAuth() {
       if (!currentClientKey) {
         showAuthModal();
         return;
       }
-      if (currentClientKey === "Ayan@786786") {
-        document.getElementById("license-expiry-txt").innerText = "Admin Account (Lifetime)";
-        initializeRuntime();
-        return;
-      }
-      const { data } = await db.table("licenses").select("*").eq("license_key", currentClientKey).single();
-      if (!data || new Date(data.expiry_date) < new Date() || data.status !== "active") {
-        showAuthModal("License expire ho gaya hai. ₹100 recharge karein.");
-      } else {
-        document.getElementById("license-expiry-txt").innerText = `Valid till: ${data.expiry_date}`;
-        initializeRuntime();
-      }
+      document.getElementById("license-expiry-txt").innerText = "Account: " + currentClientKey;
+      initializeRuntime();
     }
 
     function showAuthModal(msg = "") {
@@ -320,23 +280,22 @@
     }
 
     async function loginWithKey() {
-      const key = document.getElementById("sb_publishable_91o8zHQkH-C5j_y4MQa-YQ_mmnjBn_V").value.trim();
+      const key = document.getElementById("input-license").value.trim();
       if (!key) return;
       currentClientKey = key;
       localStorage.setItem("pro_client_key", key);
       document.getElementById("auth-modal").classList.add("hidden");
-      await syncFromCloud();
-      checkAuth();
+      initializeRuntime();
+      syncFromCloud();
     }
 
     function paySubscription() {
       const phone = document.getElementById("sub-phone").value.trim();
       if (!phone || phone.length < 10) {
-        alert("Kripya 10 digit mobile number daalein");
+        alert("10 digit mobile number daalein");
         return;
       }
       window.location.href = `upi://pay?pa=shenduayan21-2@okhdfcbank&pn=ProScanBilling&am=100&cu=INR&tn=Monthly_Sub_${phone}`;
-      alert("Payment hone ke baad Admin se apni key activate karwayein!");
     }
 
     function logout() {
@@ -344,39 +303,40 @@
       location.reload();
     }
 
-    // --- 2. LOCAL-FIRST INITIALIZE ---
     function initializeRuntime() {
       renderProductList();
       populateProfileInputs();
-      initCameraScanner();
       syncFromCloud();
     }
 
     async function syncFromCloud() {
-      if (!currentClientKey) return;
-      const { data: prof } = await db.table("store_profile").select("*").eq("client_key", currentClientKey).single();
-      if (prof) {
-        profileData = prof;
-        localStorage.setItem("cached_profile", JSON.stringify(prof));
-        populateProfileInputs();
-      }
-      const { data: inv } = await db.table("inventory").select("*").eq("client_key", currentClientKey);
-      if (inv) {
-        inventory = inv;
-        localStorage.setItem("cached_inventory", JSON.stringify(inv));
-        renderProductList();
+      try {
+        const { data: prof } = await db.table("store_profile").select("*").eq("client_key", currentClientKey).single();
+        if (prof) {
+          profileData = prof;
+          localStorage.setItem("cached_profile", JSON.stringify(prof));
+          populateProfileInputs();
+        }
+        const { data: inv } = await db.table("inventory").select("*").eq("client_key", currentClientKey);
+        if (inv) {
+          inventory = inv;
+          localStorage.setItem("cached_inventory", JSON.stringify(inv));
+          renderProductList();
+        }
+      } catch (err) {
+        console.log("Offline mode or sync check");
       }
     }
 
     function refreshLocalCache() {
-      syncFromCloud().then(() => alert("Samaan list update ho gayi!"));
+      syncFromCloud().then(() => alert("Samaan list sync ho gayi!"));
     }
 
     function populateProfileInputs() {
       document.getElementById("prof-store").value = profileData.store_name || "";
       document.getElementById("prof-address").value = profileData.address || "";
       document.getElementById("prof-phone").value = profileData.phone || "";
-      document.getElementById("prof-upi").value = profileData.upi_id || "";
+      document.getElementById("prof-upi").value = profileData.upi_id || "shenduayan21-2@okhdfcbank";
       document.getElementById("prof-footer").value = profileData.footer || "*** DHANYAWAD - PHIR AAYEIN ***";
     }
 
@@ -395,16 +355,261 @@
       
       const st = document.getElementById("profile-status");
       st.innerText = "✅ Profile Saved!";
-      setTimeout(() => { st.innerText = ""; }, 2500);
+      setTimeout(() => { st.innerText = ""; }, 2000);
     }
 
-    // --- 3. INVENTORY ---
+    async function toggleCamera() {
+      const btn = document.getElementById("btn-toggle-cam");
+      if (isCameraRunning) {
+        if (html5QrCode) {
+          await html5QrCode.stop();
+          html5QrCode.clear();
+        }
+        isCameraRunning = false;
+        btn.innerText = "📷 Camera Chalu Karein";
+        btn.className = "bg-blue-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow active:scale-95";
+        return;
+      }
+
+      btn.innerText = "⏳ Loading...";
+      try {
+        html5QrCode = new Html5Qrcode("reader");
+        await html5QrCode.start(
+          { facingMode: "environment" },
+          { fps: 15, qrbox: { width: 220, height: 130 } },
+          (decodedText) => {
+            handleScannedCode(decodedText);
+          }
+        );
+        isCameraRunning = true;
+        btn.innerText = "⏹ Camera Band Karein";
+        btn.className = "bg-red-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow active:scale-95";
+      } catch (err) {
+        alert("Camera chalu nahi hua. Kripya permission allow karein ya manual code add karein.");
+        btn.innerText = "📷 Camera Chalu Karein";
+        isCameraRunning = false;
+      }
+    }
+
+    function handleScannedCode(code) {
+      code = code.trim();
+      const product = inventory.find(p => p["Item Code"] === code);
+      if (product) {
+        addToCart(product);
+      }
+    }
+
+    function addByManualCode() {
+      const codeInput = document.getElementById("quick-barcode");
+      const code = codeInput.value.trim();
+      if (!code) return;
+      const product = inventory.find(p => p["Item Code"] === code);
+      if (product) {
+        addToCart(product);
+        codeInput.value = "";
+      } else {
+        alert("Yeh barcode inventory me nahi mila! Pehle 'Samaan' tab me add karein.");
+      }
+    }
+
+    function addToCart(product) {
+      const code = product["Item Code"];
+      if (cart[code]) cart[code].qty += 1;
+      else cart[code] = { name: product["Item Name"], price: product["Price"], qty: 1 };
+      renderCart();
+    }
+
     async function saveProduct() {
       const code = document.getElementById("inv-code").value.trim();
       const name = document.getElementById("inv-name").value.trim();
       const price = parseFloat(document.getElementById("inv-price").value) || 0;
       if (!code || !name || price <= 0) {
-        alert("Barcode, Naam aur Daam bharein!");
+        alert("Barcode, Naam aur Price bharein!");
         return;
       }
-      const newItem = { client_key: currentClientKey, "Item Code
+      const newItem = { client_key: currentClientKey, "Item Code": code, "Item Name": name, "Price": price };
+      
+      const existingIdx = inventory.findIndex(i => i["Item Code"] === code);
+      if (existingIdx >= 0) inventory[existingIdx] = newItem;
+      else inventory.push(newItem);
+      localStorage.setItem("cached_inventory", JSON.stringify(inventory));
+      renderProductList();
+
+      document.getElementById("inv-code").value = "";
+      document.getElementById("inv-name").value = "";
+      document.getElementById("inv-price").value = "";
+
+      await db.table("inventory").upsert(newItem, { onConflict: "client_key,Item Code" });
+      alert("Samaan save ho gaya!");
+    }
+
+    function renderProductList() {
+      const container = document.getElementById("product-list-container");
+      if (inventory.length === 0) {
+        container.innerHTML = `<div class="text-center text-gray-400 text-xs py-4">Abhi tak koi samaan add nahi hua hai.</div>`;
+        return;
+      }
+      container.innerHTML = inventory.map(item => `
+        <div class="bg-white p-3 rounded-xl border border-gray-100 flex justify-between items-center text-sm shadow-sm">
+          <div>
+            <p class="font-bold text-gray-800">${item["Item Name"]}</p>
+            <p class="text-xs text-gray-400">Code: ${item["Item Code"]}</p>
+          </div>
+          <span class="font-bold text-gray-900">₹${item["Price"]}</span>
+        </div>
+      `).join("");
+    }
+
+    function renderCart() {
+      const container = document.getElementById("cart-container");
+      const codes = Object.keys(cart);
+      if (codes.length === 0) {
+        container.innerHTML = `<div class="text-center text-gray-400 mt-10 text-sm">Koi samaan add nahi hua.<br>Camera se scan karein ya code likhein!</div>`;
+        document.getElementById("grand-total").innerText = "₹0.00";
+        return;
+      }
+      let total = 0;
+      container.innerHTML = codes.map(code => {
+        const item = cart[code];
+        const subtotal = item.price * item.qty;
+        total += subtotal;
+        return `
+          <div class="bg-white p-3 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between">
+            <div>
+              <p class="font-bold text-gray-900 text-sm">${item.name}</p>
+              <span onclick="openQtyModal('${code}')" class="inline-block mt-1 bg-blue-50 text-blue-700 text-xs px-2 py-0.5 rounded-md font-semibold cursor-pointer">
+                ${item.qty} pcs @ ₹${item.price} ✏️
+              </span>
+            </div>
+            <div class="flex items-center gap-3">
+              <span class="font-extrabold text-sm">₹${subtotal}</span>
+              <button onclick="removeFromCart('${code}')" class="text-red-500 font-bold p-1 text-base">🗑️</button>
+            </div>
+          </div>
+        `;
+      }).join("");
+      document.getElementById("grand-total").innerText = `₹${total.toFixed(2)}`;
+    }
+
+    function removeFromCart(code) {
+      delete cart[code];
+      renderCart();
+    }
+
+    function openQtyModal(code) {
+      editingCode = code;
+      document.getElementById("qty-item-name").innerText = cart[code].name;
+      document.getElementById("qty-value").innerText = cart[code].qty;
+      document.getElementById("qty-modal").classList.remove("hidden");
+    }
+
+    function changeQty(diff) {
+      let val = parseInt(document.getElementById("qty-value").innerText) + diff;
+      if (val < 1) val = 1;
+      document.getElementById("qty-value").innerText = val;
+    }
+
+    function saveQtyChange() {
+      if (editingCode && cart[editingCode]) {
+        cart[editingCode].qty = parseInt(document.getElementById("qty-value").innerText);
+        renderCart();
+      }
+      document.getElementById("qty-modal").classList.add("hidden");
+    }
+
+    function openPaymentQR() {
+      const codes = Object.keys(cart);
+      if (codes.length === 0) {
+        alert("Cart khali hai!");
+        return;
+      }
+      const upiId = profileData.upi_id;
+      if (!upiId) {
+        alert("Settings/Profile me jaakar apni UPI ID bharein!");
+        switchTab('settings');
+        return;
+      }
+      let total = 0;
+      codes.forEach(c => total += cart[c].price * cart[c].qty);
+      
+      const upiString = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(profileData.store_name || "POS")}&am=${total.toFixed(2)}&cu=INR`;
+      
+      const qrBox = document.getElementById("upi-qrcode");
+      qrBox.innerHTML = "";
+      new QRCode(qrBox, {
+        text: upiString,
+        width: 170,
+        height: 170,
+        correctLevel: QRCode.CorrectLevel.M
+      });
+
+      document.getElementById("qr-amount-txt").innerText = `₹${total.toFixed(2)}`;
+      document.getElementById("qr-modal").classList.remove("hidden");
+    }
+
+    function closeQRModal() {
+      document.getElementById("qr-modal").classList.add("hidden");
+    }
+
+    function checkout(mode) {
+      closeQRModal();
+      const codes = Object.keys(cart);
+      if (codes.length === 0) return;
+
+      const totalAmount = document.getElementById("grand-total").innerText;
+      const invNo = "INV-" + Math.floor(100000 + Math.random() * 900000);
+      const dateStr = new Date().toLocaleString("en-IN");
+
+      document.getElementById("rec-store-name").innerText = profileData.store_name || "MY STORE";
+      document.getElementById("rec-store-address").innerText = profileData.address || "";
+      document.getElementById("rec-store-phone").innerText = profileData.phone ? `Ph: ${profileData.phone}` : "";
+      document.getElementById("rec-date-time").innerText = dateStr;
+      document.getElementById("rec-invoice-no").innerText = `Bill: #${invNo} | Pay: ${mode}`;
+      document.getElementById("rec-total-amount").innerText = totalAmount;
+      document.getElementById("rec-footer-note").innerText = profileData.footer || "*** DHANYAWAD - PHIR AAYEIN ***";
+
+      document.getElementById("rec-items-list").innerHTML = codes.map(c => `
+        <div class="flex justify-between">
+          <span>${cart[c].name} x${cart[c].qty}</span>
+          <span>₹${cart[c].price * cart[c].qty}</span>
+        </div>
+      `).join("");
+
+      document.getElementById("receipt-modal").classList.remove("hidden");
+    }
+
+    function printReceipt() {
+      window.print();
+    }
+
+    function downloadPDFReceipt() {
+      const element = document.getElementById("printable-receipt");
+      const opt = {
+        margin: 5,
+        filename: `Bill_${Date.now()}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 3 },
+        jsPDF: { unit: 'mm', format: [80, 150], orientation: 'portrait' }
+      };
+      html2pdf().set(opt).from(element).save();
+    }
+
+    function closeReceipt() {
+      cart = {};
+      renderCart();
+      document.getElementById("receipt-modal").classList.add("hidden");
+    }
+
+    function switchTab(tabId) {
+      ['billing', 'products', 'settings'].forEach(t => {
+        document.getElementById(`tab-${t}`).classList.add('hidden');
+        document.getElementById(`nav-${t}`).classList.replace('text-blue-600', 'text-gray-400');
+      });
+      document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+      document.getElementById(`nav-${tabId}`).classList.replace('text-gray-400', 'text-blue-600');
+    }
+
+    window.onload = checkAuth;
+  </script>
+</body>
+</html>
