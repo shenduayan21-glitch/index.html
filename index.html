@@ -16,26 +16,33 @@
     @media print {
       body * { visibility: hidden; }
       #printable-receipt, #printable-receipt * { visibility: visible; }
-      #printable-receipt { position: absolute; left: 0; top: 0; width: 100%; }
+      #printable-receipt {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        margin: 0;
+        padding: 10px;
+      }
     }
   </style>
 </head>
 <body class="bg-gray-100 text-gray-800 font-sans h-screen flex flex-col justify-between select-none">
 
-  <!-- 🔒 LOGIN MODAL -->
+  <!-- 🔒 LOGIN / ID MODAL -->
   <div id="auth-modal" class="fixed inset-0 bg-white z-50 flex flex-col justify-center items-center p-6 hidden">
     <div class="w-full max-w-sm text-center">
       <div class="text-4xl mb-2">⚡</div>
       <h1 class="text-2xl font-bold text-gray-900">Pro Scan Billing</h1>
-      <p class="text-sm text-gray-500 mb-6">Login / Access Plan</p>
+      <p class="text-sm text-gray-500 mb-6">Store Access ID Login</p>
 
       <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4 text-left">
-        <p class="text-xs font-semibold text-blue-800 uppercase">Current Key</p>
+        <p class="text-xs font-semibold text-blue-800 uppercase">Master Admin ID</p>
         <h2 class="text-xl font-bold text-blue-900">Ayan@786786</h2>
-        <p class="text-xs text-blue-600 mt-1">Direct Unlimited Admin Access</p>
+        <p class="text-xs text-blue-600 mt-1">Direct Unlimited Cloud Access</p>
       </div>
 
-      <input id="input-license" type="text" placeholder="License Key" 
+      <input id="input-license" type="text" placeholder="Enter Store ID" 
              value="Ayan@786786"
              class="w-full p-3 border rounded-xl mb-3 text-center uppercase tracking-wider font-semibold focus:outline-none focus:ring-2 focus:ring-blue-600" />
       
@@ -64,7 +71,7 @@
       </div>
 
       <div class="w-full mt-2 flex gap-1">
-        <input id="quick-barcode" type="text" placeholder="Barcode code daalein aur Add karein..." 
+        <input id="quick-barcode" type="text" placeholder="Barcode code daalein..." 
                class="flex-1 px-3 py-1.5 bg-gray-800 text-white text-xs rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500"
                onkeypress="if(event.key==='Enter') addByManualCode()" />
         <button onclick="addByManualCode()" class="bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold active:scale-95">
@@ -73,24 +80,24 @@
       </div>
     </div>
 
-    <!-- Scanned Cart Items -->
+    <!-- Cart items -->
     <div class="flex-1 overflow-y-auto p-3 space-y-2" id="cart-container">
       <div id="empty-cart-msg" class="text-center text-gray-400 mt-10 text-sm">
         Koi samaan add nahi hua.<br>Camera se scan karein ya code likhein!
       </div>
     </div>
 
-    <!-- Total Bar & Action Buttons -->
+    <!-- Total and Checkouts -->
     <div class="bg-white border-t border-gray-200 p-3 shadow-lg flex-shrink-0">
       <div class="flex justify-between items-baseline mb-2">
-        <span class="text-xs uppercase text-gray-500 font-bold tracking-wide">Total Bill:</span>
+        <span class="text-xs uppercase text-gray-500 font-bold tracking-wide">TOTAL AMOUNT:</span>
         <span id="grand-total" class="text-2xl font-black text-gray-900">₹0.00</span>
       </div>
       <div class="grid grid-cols-2 gap-2">
-        <button id="btn-cash" onclick="checkout('Cash')" class="bg-emerald-600 active:scale-95 transition text-white py-3 rounded-xl font-bold flex justify-center items-center gap-1 shadow">
+        <button onclick="checkout('Cash')" class="bg-emerald-600 active:scale-95 transition text-white py-3 rounded-xl font-bold flex justify-center items-center gap-1 shadow">
           💵 Cash
         </button>
-        <button id="btn-upi" onclick="openPaymentQR()" class="bg-blue-600 active:scale-95 transition text-white py-3 rounded-xl font-bold flex justify-center items-center gap-1 shadow">
+        <button onclick="openPaymentQR()" class="bg-blue-600 active:scale-95 transition text-white py-3 rounded-xl font-bold flex justify-center items-center gap-1 shadow">
           📱 GPay / UPI QR
         </button>
       </div>
@@ -98,7 +105,7 @@
   </div>
 
   <!-- ==================================================== -->
-  <!-- 📦 TAB 2: INVENTORY (QTY & SCANNER)                  -->
+  <!-- 📦 TAB 2: INVENTORY & STOCK                          -->
   <!-- ==================================================== -->
   <div id="tab-products" class="flex-1 flex flex-col p-4 overflow-y-auto hidden">
     <div class="flex justify-between items-center mb-3">
@@ -110,7 +117,7 @@
 
     <div id="inv-reader-box" class="w-full bg-slate-900 rounded-2xl p-2 mb-3 hidden flex flex-col items-center">
       <div id="inv-reader" class="w-full max-w-xs rounded-xl overflow-hidden"></div>
-      <p class="text-[11px] text-gray-300 mt-1">Barcode frame me layein (Auto fill ho jayega)</p>
+      <p class="text-[11px] text-gray-300 mt-1">Barcode frame me layein</p>
     </div>
 
     <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 mb-4 space-y-3">
@@ -120,15 +127,15 @@
       </div>
       <div>
         <label class="text-xs text-gray-500 font-semibold">Samaan Ka Naam</label>
-        <input id="inv-name" type="text" placeholder="Jaise: Soap, Oil, Rice" class="w-full p-2.5 border rounded-xl mt-1 text-sm" />
+        <input id="inv-name" type="text" placeholder="Item Name" class="w-full p-2.5 border rounded-xl mt-1 text-sm" />
       </div>
       <div class="grid grid-cols-2 gap-2">
         <div>
-          <label class="text-xs text-gray-500 font-semibold">Selling Price (₹)</label>
-          <input id="inv-price" type="number" placeholder="Daam (₹)" class="w-full p-2.5 border rounded-xl mt-1 text-sm" />
+          <label class="text-xs text-gray-500 font-semibold">Rate (₹)</label>
+          <input id="inv-price" type="number" placeholder="Selling Price" class="w-full p-2.5 border rounded-xl mt-1 text-sm" />
         </div>
         <div>
-          <label class="text-xs text-gray-500 font-semibold">Stock Qty (Pcs)</label>
+          <label class="text-xs text-gray-500 font-semibold">Stock Qty</label>
           <input id="inv-qty" type="number" placeholder="Pieces" class="w-full p-2.5 border rounded-xl mt-1 text-sm" />
         </div>
       </div>
@@ -150,23 +157,23 @@
     <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 mb-4 space-y-3">
       <div>
         <label class="text-xs text-gray-500 font-semibold">Dukan Ka Naam</label>
-        <input id="prof-store" type="text" placeholder="Apni Dukan Ka Naam" class="w-full p-2.5 border rounded-xl mt-1 text-sm" />
+        <input id="prof-store" type="text" placeholder="STORE NAME" class="w-full p-2.5 border rounded-xl mt-1 text-sm" />
       </div>
       <div>
-        <label class="text-xs text-gray-500 font-semibold">Dukan Ka Pata</label>
-        <textarea id="prof-address" rows="2" placeholder="Gali, Area, Shahar" class="w-full p-2.5 border rounded-xl mt-1 text-sm"></textarea>
+        <label class="text-xs text-gray-500 font-semibold">GSTIN Number (Optional)</label>
+        <input id="prof-gstin" type="text" placeholder="GSTIN : 33A123456789" class="w-full p-2.5 border rounded-xl mt-1 text-sm" />
+      </div>
+      <div>
+        <label class="text-xs text-gray-500 font-semibold">Dukan Ka Pata (Address)</label>
+        <textarea id="prof-address" rows="2" placeholder="Full Address" class="w-full p-2.5 border rounded-xl mt-1 text-sm"></textarea>
       </div>
       <div>
         <label class="text-xs text-gray-500 font-semibold">Phone Number</label>
         <input id="prof-phone" type="tel" placeholder="Mobile Number" class="w-full p-2.5 border rounded-xl mt-1 text-sm" />
       </div>
       <div>
-        <label class="text-xs text-gray-500 font-semibold">UPI ID (QR Code Ke Liye)</label>
+        <label class="text-xs text-gray-500 font-semibold">UPI ID (QR Payment Ke Liye)</label>
         <input id="prof-upi" type="text" placeholder="shenduayan21-2@okhdfcbank" class="w-full p-2.5 border rounded-xl mt-1 text-sm" />
-      </div>
-      <div>
-        <label class="text-xs text-gray-500 font-semibold">Bill Footer Note</label>
-        <input id="prof-footer" type="text" value="*** DHANYAWAD - PHIR AAYEIN ***" class="w-full p-2.5 border rounded-xl mt-1 text-xs" />
       </div>
 
       <button onclick="saveStoreProfile()" class="w-full bg-blue-600 text-white font-bold py-3 rounded-xl shadow active:scale-95 transition">
@@ -176,12 +183,12 @@
     </div>
 
     <div class="bg-slate-900 text-white p-4 rounded-2xl shadow-md mb-4">
-      <div class="text-xs text-gray-400 uppercase font-semibold">Account Status</div>
-      <div class="text-lg font-bold mt-1" id="license-expiry-txt">Admin (Lifetime)</div>
+      <div class="text-xs text-gray-400 uppercase font-semibold">Login Status</div>
+      <div class="text-base font-bold mt-1" id="license-expiry-txt">Checking...</div>
     </div>
 
     <button onclick="logout()" class="w-full border border-red-300 text-red-600 font-semibold py-2.5 rounded-xl mb-6 active:bg-red-50">
-      🚪 Logout
+      🚪 Switch Store / Logout
     </button>
   </div>
 
@@ -201,34 +208,72 @@
     </div>
   </div>
 
-  <!-- 🧾 RECEIPT MODAL -->
-  <div id="receipt-modal" class="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4 hidden">
-    <div class="bg-white w-full max-w-sm rounded-2xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
-      <div id="printable-receipt" class="p-4 overflow-y-auto bg-white text-xs font-mono text-gray-900 space-y-2">
-        <div class="text-center border-b pb-2">
-          <h2 class="text-base font-bold uppercase" id="rec-store-name">MY STORE</h2>
-          <p id="rec-store-address" class="text-[10px] text-gray-500"></p>
-          <p id="rec-store-phone" class="text-[10px] text-gray-500"></p>
-          <p id="rec-date-time" class="text-[10px] text-gray-400 mt-1"></p>
-          <p id="rec-invoice-no" class="text-[10px] text-gray-400"></p>
+  <!-- ==================================================== -->
+  <!-- 🧾 EXACT RECEIPT MODAL (AS IN SCREENSHOT)            -->
+  <!-- ==================================================== -->
+  <div id="receipt-modal" class="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-3 hidden">
+    <div class="bg-white w-full max-w-sm rounded-2xl overflow-hidden shadow-2xl flex flex-col max-h-[92vh]">
+      
+      <!-- Receipt View Area -->
+      <div id="printable-receipt" class="p-6 overflow-y-auto bg-white text-gray-800 font-sans text-xs">
+        <!-- Header -->
+        <div class="text-center pb-3">
+          <h2 class="text-xl font-black uppercase tracking-wide" id="rec-store-name">DIZETECH SHOP</h2>
+          <p id="rec-store-gstin" class="text-[11px] text-gray-600 font-medium mt-0.5">GSTIN : 33A123456789</p>
+          <p id="rec-store-address" class="text-[11px] text-gray-600 mt-0.5 leading-tight">No. 22, Main road, Kumar nagar</p>
+          <p id="rec-store-phone" class="text-[11px] text-gray-600 mt-0.5">PH : 63820 62807</p>
         </div>
-        <div class="border-b pb-2 space-y-1" id="rec-items-list"></div>
-        <div class="flex justify-between font-bold text-sm pt-1">
-          <span>TOTAL AMOUNT:</span>
-          <span id="rec-total-amount">₹0.00</span>
+
+        <div class="border-b border-gray-300 my-2"></div>
+
+        <!-- Meta Line -->
+        <div class="flex justify-between text-[11px] font-semibold text-gray-700 py-1">
+          <span id="rec-invoice-no">Bill: #3111104</span>
+          <span id="rec-date-time">22-Jul-26 15:08</span>
         </div>
-        <p id="rec-footer-note" class="text-center text-[10px] text-gray-500 pt-2"></p>
+
+        <div class="border-b border-gray-300 my-2"></div>
+
+        <!-- Table Columns Header -->
+        <div class="grid grid-cols-12 text-[11px] font-bold text-gray-900 pb-1.5 border-b border-gray-200">
+          <span class="col-span-6">Item</span>
+          <span class="col-span-2 text-center">Qty</span>
+          <span class="col-span-2 text-right">Rate</span>
+          <span class="col-span-2 text-right">Amount</span>
+        </div>
+
+        <!-- Item Rows -->
+        <div class="py-2 space-y-2 border-b border-gray-200 text-[11px]" id="rec-items-list">
+          <!-- Dynamically populated -->
+        </div>
+
+        <!-- Total Area -->
+        <div class="flex justify-between items-center py-2.5">
+          <span class="font-black text-sm uppercase tracking-wide">TOTAL AMOUNT</span>
+          <span id="rec-total-amount" class="text-lg font-black text-gray-900">₹0.00</span>
+        </div>
+
+        <div class="text-[11px] text-gray-600 italic pb-2">
+          <span id="rec-pay-mode">Payment Mode: Cash</span>
+        </div>
+
+        <div class="border-b border-gray-300 my-2"></div>
+
+        <!-- Footer Notice -->
+        <div class="text-center pt-2 space-y-1 text-[11px] text-gray-600">
+          <p class="text-[10px] text-gray-500">Terms & Conditions: Goods once sold will not be taken back.</p>
+          <p class="font-bold text-gray-800 tracking-wider">*** THANK YOU ***</p>
+          <p class="font-bold text-gray-800 tracking-wider">*** VISIT AGAIN ***</p>
+        </div>
       </div>
 
-      <div class="p-3 bg-gray-50 border-t grid grid-cols-2 gap-2">
-        <button onclick="printReceipt()" class="bg-blue-600 text-white font-bold py-2.5 rounded-xl text-xs shadow">
-          🖨️ Print Slip
+      <!-- Footer Buttons -->
+      <div class="p-3 bg-gray-50 border-t grid grid-cols-2 gap-3">
+        <button onclick="closeReceipt()" class="bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-2.5 rounded-xl text-xs active:scale-95 flex items-center justify-center gap-1 border">
+          ← Back
         </button>
-        <button onclick="downloadPDFReceipt()" class="bg-purple-600 text-white font-bold py-2.5 rounded-xl text-xs shadow">
-          📥 Save PDF
-        </button>
-        <button onclick="closeReceipt()" class="col-span-2 text-center text-xs text-gray-500 font-semibold py-1">
-          ← Agla Bill Banayein
+        <button onclick="printReceipt()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-xl text-xs active:scale-95 flex items-center justify-center gap-1 shadow">
+          🖨️ Print
         </button>
       </div>
     </div>
@@ -275,10 +320,14 @@
     }
 
     let currentClientKey = localStorage.getItem("pro_client_key") || "Ayan@786786";
-    let profileData = JSON.parse(localStorage.getItem("cached_profile") || "null") || {
-      store_name: "MY STORE", address: "", phone: "", upi_id: "shenduayan21-2@okhdfcbank", footer: "*** DHANYAWAD - PHIR AAYEIN ***"
+    let profileData = JSON.parse(localStorage.getItem("cached_profile_" + currentClientKey) || "null") || {
+      store_name: "DIZETECH SHOP", 
+      gstin: "33A123456789", 
+      address: "No. 22, Main road, Kumar nagar", 
+      phone: "63820 62807", 
+      upi_id: "shenduayan21-2@okhdfcbank"
     };
-    let inventory = JSON.parse(localStorage.getItem("cached_inventory") || "[]");
+    let inventory = JSON.parse(localStorage.getItem("cached_inventory_" + currentClientKey) || "[]");
     let cart = {};
     let editingCode = null;
     let billingScanner = null;
@@ -291,7 +340,7 @@
         showAuthModal();
         return;
       }
-      document.getElementById("license-expiry-txt").innerText = "Account: " + currentClientKey;
+      document.getElementById("license-expiry-txt").innerText = "Logged in: " + currentClientKey;
       initializeRuntime();
     }
 
@@ -306,12 +355,18 @@
       currentClientKey = key;
       localStorage.setItem("pro_client_key", key);
       document.getElementById("auth-modal").classList.add("hidden");
+      
+      // Load store data specific to this ID
+      inventory = JSON.parse(localStorage.getItem("cached_inventory_" + currentClientKey) || "[]");
+      profileData = JSON.parse(localStorage.getItem("cached_profile_" + currentClientKey) || "null") || profileData;
+      
       initializeRuntime();
-      syncFromCloud();
+      await syncFromCloud();
     }
 
     function logout() {
-      localStorage.clear();
+      // Don't clear inventory data, only reset active login session
+      localStorage.removeItem("pro_client_key");
       location.reload();
     }
 
@@ -322,422 +377,40 @@
     }
 
     async function syncFromCloud() {
-      if (!db) return;
+      if (!db || !currentClientKey) return;
       try {
         const { data: prof } = await db.from("store_profile").select("*").eq("client_key", currentClientKey).maybeSingle();
         if (prof) {
           profileData = prof;
-          localStorage.setItem("cached_profile", JSON.stringify(prof));
+          localStorage.setItem("cached_profile_" + currentClientKey, JSON.stringify(prof));
           populateProfileInputs();
         }
         const { data: inv } = await db.from("inventory").select("*").eq("client_key", currentClientKey);
         if (inv) {
           inventory = inv;
-          localStorage.setItem("cached_inventory", JSON.stringify(inv));
+          localStorage.setItem("cached_inventory_" + currentClientKey, JSON.stringify(inv));
           renderProductList();
         }
       } catch (err) {
-        console.log("Offline mode or sync check", err);
+        console.log("Offline mode or sync delay", err);
       }
     }
 
     function refreshLocalCache() {
-      syncFromCloud().then(() => alert("Samaan & Stock list sync ho gayi!"));
+      syncFromCloud().then(() => alert("Stock list synced from cloud!"));
     }
 
     function populateProfileInputs() {
       document.getElementById("prof-store").value = profileData.store_name || "";
+      document.getElementById("prof-gstin").value = profileData.gstin || "";
       document.getElementById("prof-address").value = profileData.address || "";
       document.getElementById("prof-phone").value = profileData.phone || "";
       document.getElementById("prof-upi").value = profileData.upi_id || "shenduayan21-2@okhdfcbank";
-      document.getElementById("prof-footer").value = profileData.footer || "*** DHANYAWAD - PHIR AAYEIN ***";
     }
 
     async function saveStoreProfile() {
       const payload = {
         client_key: currentClientKey,
         store_name: document.getElementById("prof-store").value.trim(),
-        address: document.getElementById("prof-address").value.trim(),
-        phone: document.getElementById("prof-phone").value.trim(),
-        upi_id: document.getElementById("prof-upi").value.trim(),
-        footer: document.getElementById("prof-footer").value.trim()
-      };
-      profileData = payload;
-      localStorage.setItem("cached_profile", JSON.stringify(payload));
-      if (db) {
-        await db.from("store_profile").upsert(payload, { onConflict: "client_key" });
-      }
-      
-      const st = document.getElementById("profile-status");
-      st.innerText = "✅ Profile Saved!";
-      setTimeout(() => { st.innerText = ""; }, 2000);
-    }
-
-    // --- BILLING CAMERA SCANNER ---
-    async function toggleBillingCamera() {
-      const btn = document.getElementById("btn-toggle-cam-bill");
-      if (isBillingCamRunning) {
-        if (billingScanner) {
-          await billingScanner.stop();
-          billingScanner.clear();
-        }
-        isBillingCamRunning = false;
-        btn.innerText = "📷 Camera Chalu Karein";
-        btn.className = "bg-blue-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow active:scale-95";
-        return;
-      }
-
-      btn.innerText = "⏳ Loading...";
-      try {
-        billingScanner = new Html5Qrcode("billing-reader");
-        await billingScanner.start(
-          { facingMode: "environment" },
-          { fps: 15, qrbox: { width: 220, height: 130 } },
-          (decodedText) => {
-            handleScannedCode(decodedText);
-          }
-        );
-        isBillingCamRunning = true;
-        btn.innerText = "⏹ Camera Band Karein";
-        btn.className = "bg-red-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow active:scale-95";
-      } catch (err) {
-        alert("Camera permission allow karein ya mobile settings me camera on karein.");
-        btn.innerText = "📷 Camera Chalu Karein";
-        isBillingCamRunning = false;
-      }
-    }
-
-    // --- INVENTORY CAMERA SCANNER ---
-    async function toggleInvCamera() {
-      const box = document.getElementById("inv-reader-box");
-      const btn = document.getElementById("btn-toggle-cam-inv");
-
-      if (isInvCamRunning) {
-        if (invScanner) {
-          await invScanner.stop();
-          invScanner.clear();
-        }
-        isInvCamRunning = false;
-        box.classList.add("hidden");
-        btn.innerText = "📷 Scan Barcode";
-        btn.className = "bg-indigo-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow active:scale-95 flex items-center gap-1";
-        return;
-      }
-
-      box.classList.remove("hidden");
-      btn.innerText = "⏹ Band Karein";
-      btn.className = "bg-red-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow active:scale-95 flex items-center gap-1";
-
-      try {
-        invScanner = new Html5Qrcode("inv-reader");
-        await invScanner.start(
-          { facingMode: "environment" },
-          { fps: 15, qrbox: { width: 220, height: 130 } },
-          (decodedText) => {
-            document.getElementById("inv-code").value = decodedText.trim();
-            checkAutoFillDetails();
-            toggleInvCamera();
-          }
-        );
-        isInvCamRunning = true;
-      } catch (err) {
-        alert("Camera start nahi hua.");
-        toggleInvCamera();
-      }
-    }
-
-    function checkAutoFillDetails() {
-      const code = document.getElementById("inv-code").value.trim();
-      if (!code) return;
-      const exist = inventory.find(i => i["Item Code"] === code);
-      if (exist) {
-        document.getElementById("inv-name").value = exist["Item Name"] || "";
-        document.getElementById("inv-price").value = exist["Price"] || "";
-        document.getElementById("inv-qty").value = exist["Quantity"] || 0;
-      }
-    }
-
-    function handleScannedCode(code) {
-      code = code.trim();
-      const product = inventory.find(p => p["Item Code"] === code);
-      if (product) {
-        addToCart(product);
-      }
-    }
-
-    function addByManualCode() {
-      const codeInput = document.getElementById("quick-barcode");
-      const code = codeInput.value.trim();
-      if (!code) return;
-      const product = inventory.find(p => p["Item Code"] === code);
-      if (product) {
-        addToCart(product);
-        codeInput.value = "";
-      } else {
-        alert("Yeh barcode inventory me nahi mila! Pehle 'Samaan' tab me add karein.");
-      }
-    }
-
-    function addToCart(product) {
-      const code = product["Item Code"];
-      const currentInCart = cart[code] ? cart[code].qty : 0;
-      const stockAvailable = parseFloat(product["Quantity"]) || 0;
-
-      if (stockAvailable > 0 && currentInCart >= stockAvailable) {
-        alert(`Stock limit reached! Sirf ${stockAvailable} piece bacha hai.`);
-        return;
-      }
-
-      if (cart[code]) cart[code].qty += 1;
-      else cart[code] = { name: product["Item Name"], price: product["Price"], qty: 1 };
-      renderCart();
-    }
-
-    async function saveProduct() {
-      const code = document.getElementById("inv-code").value.trim();
-      const name = document.getElementById("inv-name").value.trim();
-      const price = parseFloat(document.getElementById("inv-price").value) || 0;
-      const qty = parseFloat(document.getElementById("inv-qty").value) || 0;
-
-      if (!code || !name || price <= 0) {
-        alert("Barcode, Naam aur Price bharein!");
-        return;
-      }
-      const newItem = { 
-        client_key: currentClientKey, 
-        "Item Code": code, 
-        "Item Name": name, 
-        "Price": price,
-        "Quantity": qty
-      };
-      
-      const existingIdx = inventory.findIndex(i => i["Item Code"] === code);
-      if (existingIdx >= 0) inventory[existingIdx] = newItem;
-      else inventory.push(newItem);
-      localStorage.setItem("cached_inventory", JSON.stringify(inventory));
-      renderProductList();
-
-      document.getElementById("inv-code").value = "";
-      document.getElementById("inv-name").value = "";
-      document.getElementById("inv-price").value = "";
-      document.getElementById("inv-qty").value = "";
-
-      if (db) {
-        await db.from("inventory").upsert(newItem, { onConflict: "client_key,Item Code" });
-      }
-      alert("Samaan aur Stock save ho gaya!");
-    }
-
-    function renderProductList() {
-      const container = document.getElementById("product-list-container");
-      if (inventory.length === 0) {
-        container.innerHTML = `<div class="text-center text-gray-400 text-xs py-4">Abhi tak koi samaan add nahi hua hai.</div>`;
-        return;
-      }
-      container.innerHTML = inventory.map(item => {
-        const qty = parseFloat(item["Quantity"]) || 0;
-        const qtyBadge = qty <= 3 
-          ? `<span class="bg-red-100 text-red-700 text-[10px] px-2 py-0.5 rounded-full font-bold">Stock: ${qty} pcs</span>`
-          : `<span class="bg-emerald-100 text-emerald-700 text-[10px] px-2 py-0.5 rounded-full font-bold">Stock: ${qty} pcs</span>`;
-
-        return `
-          <div class="bg-white p-3 rounded-xl border border-gray-100 flex justify-between items-center text-sm shadow-sm">
-            <div>
-              <p class="font-bold text-gray-800">${item["Item Name"]}</p>
-              <div class="flex items-center gap-2 mt-1">
-                <span class="text-xs text-gray-400">Code: ${item["Item Code"]}</span>
-                ${qtyBadge}
-              </div>
-            </div>
-            <span class="font-bold text-gray-900 text-base">₹${item["Price"]}</span>
-          </div>
-        `;
-      }).join("");
-    }
-
-    function renderCart() {
-      const container = document.getElementById("cart-container");
-      const codes = Object.keys(cart);
-      if (codes.length === 0) {
-        container.innerHTML = `<div class="text-center text-gray-400 mt-10 text-sm">Koi samaan add nahi hua.<br>Camera se scan karein ya code likhein!</div>`;
-        document.getElementById("grand-total").innerText = "₹0.00";
-        return;
-      }
-      let total = 0;
-      container.innerHTML = codes.map(code => {
-        const item = cart[code];
-        const subtotal = item.price * item.qty;
-        total += subtotal;
-        return `
-          <div class="bg-white p-3 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between">
-            <div>
-              <p class="font-bold text-gray-900 text-sm">${item.name}</p>
-              <span onclick="openQtyModal('${code}')" class="inline-block mt-1 bg-blue-50 text-blue-700 text-xs px-2 py-0.5 rounded-md font-semibold cursor-pointer">
-                ${item.qty} pcs @ ₹${item.price} ✏️
-              </span>
-            </div>
-            <div class="flex items-center gap-3">
-              <span class="font-extrabold text-sm">₹${subtotal}</span>
-              <button onclick="removeFromCart('${code}')" class="text-red-500 font-bold p-1 text-base">🗑️</button>
-            </div>
-          </div>
-        `;
-      }).join("");
-      document.getElementById("grand-total").innerText = `₹${total.toFixed(2)}`;
-    }
-
-    function removeFromCart(code) {
-      delete cart[code];
-      renderCart();
-    }
-
-    function openQtyModal(code) {
-      editingCode = code;
-      document.getElementById("qty-item-name").innerText = cart[code].name;
-      document.getElementById("qty-value").innerText = cart[code].qty;
-      document.getElementById("qty-modal").classList.remove("hidden");
-    }
-
-    function changeQty(diff) {
-      let val = parseInt(document.getElementById("qty-value").innerText) + diff;
-      if (val < 1) val = 1;
-
-      if (editingCode) {
-        const prod = inventory.find(p => p["Item Code"] === editingCode);
-        if (prod && prod["Quantity"] && val > parseFloat(prod["Quantity"])) {
-          alert(`Stock me sirf ${prod["Quantity"]} piece uplabdh hai.`);
-          return;
-        }
-      }
-      document.getElementById("qty-value").innerText = val;
-    }
-
-    function saveQtyChange() {
-      if (editingCode && cart[editingCode]) {
-        cart[editingCode].qty = parseInt(document.getElementById("qty-value").innerText);
-        renderCart();
-      }
-      document.getElementById("qty-modal").classList.add("hidden");
-    }
-
-    // --- PAYMENT, RECEIPT & STOCK UPDATE ---
-    function openPaymentQR() {
-      const codes = Object.keys(cart);
-      if (codes.length === 0) {
-        alert("⚠️ Pehle koi samaan add karein! Cart abhi khali hai.");
-        return;
-      }
-      const upiId = profileData.upi_id || "shenduayan21-2@okhdfcbank";
-      let total = 0;
-      codes.forEach(c => total += cart[c].price * cart[c].qty);
-      
-      const upiString = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(profileData.store_name || "POS")}&am=${total.toFixed(2)}&cu=INR`;
-      
-      const qrBox = document.getElementById("upi-qrcode");
-      qrBox.innerHTML = "";
-      try {
-        new QRCode(qrBox, {
-          text: upiString,
-          width: 170,
-          height: 170,
-          correctLevel: QRCode.CorrectLevel.M
-        });
-      } catch(e) {
-        qrBox.innerHTML = `<a href="${upiString}" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-xs font-bold">Tap To Pay UPI</a>`;
-      }
-
-      document.getElementById("qr-amount-txt").innerText = `₹${total.toFixed(2)}`;
-      document.getElementById("qr-modal").classList.remove("hidden");
-    }
-
-    function closeQRModal() {
-      document.getElementById("qr-modal").classList.add("hidden");
-    }
-
-    async function checkout(mode) {
-      closeQRModal();
-      const codes = Object.keys(cart);
-      if (codes.length === 0) {
-        alert("⚠️ Pehle koi samaan add karein! Cart abhi khali hai.");
-        return;
-      }
-
-      const totalAmount = document.getElementById("grand-total").innerText;
-      const invNo = "INV-" + Math.floor(100000 + Math.random() * 900000);
-      const dateStr = new Date().toLocaleString("en-IN");
-
-      // Auto deduct quantity from inventory
-      for (const code of codes) {
-        const prod = inventory.find(p => p["Item Code"] === code);
-        if (prod) {
-          const currentQty = parseFloat(prod["Quantity"]) || 0;
-          const soldQty = cart[code].qty;
-          const updatedQty = Math.max(0, currentQty - soldQty);
-          prod["Quantity"] = updatedQty;
-
-          if (db) {
-            db.from("inventory").update({ "Quantity": updatedQty })
-              .eq("client_key", currentClientKey)
-              .eq("Item Code", code).then();
-          }
-        }
-      }
-      localStorage.setItem("cached_inventory", JSON.stringify(inventory));
-      renderProductList();
-
-      document.getElementById("rec-store-name").innerText = profileData.store_name || "MY STORE";
-      document.getElementById("rec-store-address").innerText = profileData.address || "";
-      document.getElementById("rec-store-phone").innerText = profileData.phone ? `Ph: ${profileData.phone}` : "";
-      document.getElementById("rec-date-time").innerText = dateStr;
-      document.getElementById("rec-invoice-no").innerText = `Bill: #${invNo} | Pay: ${mode}`;
-      document.getElementById("rec-total-amount").innerText = totalAmount;
-      document.getElementById("rec-footer-note").innerText = profileData.footer || "*** DHANYAWAD - PHIR AAYEIN ***";
-
-      document.getElementById("rec-items-list").innerHTML = codes.map(c => `
-        <div class="flex justify-between">
-          <span>${cart[c].name} x${cart[c].qty}</span>
-          <span>₹${cart[c].price * cart[c].qty}</span>
-        </div>
-      `).join("");
-
-      document.getElementById("receipt-modal").classList.remove("hidden");
-    }
-
-    function printReceipt() {
-      window.print();
-    }
-
-    function downloadPDFReceipt() {
-      const element = document.getElementById("printable-receipt");
-      const opt = {
-        margin: 5,
-        filename: `Bill_${Date.now()}.pdf`,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 3 },
-        jsPDF: { unit: 'mm', format: [80, 150], orientation: 'portrait' }
-      };
-      html2pdf().set(opt).from(element).save();
-    }
-
-    function closeReceipt() {
-      cart = {};
-      renderCart();
-      document.getElementById("receipt-modal").classList.add("hidden");
-    }
-
-    function switchTab(tabId) {
-      if (tabId !== 'billing' && isBillingCamRunning) toggleBillingCamera();
-      if (tabId !== 'products' && isInvCamRunning) toggleInvCamera();
-
-      ['billing', 'products', 'settings'].forEach(t => {
-        document.getElementById(`tab-${t}`).classList.add('hidden');
-        document.getElementById(`nav-${t}`).classList.replace('text-blue-600', 'text-gray-400');
-      });
-      document.getElementById(`tab-${tabId}`).classList.remove('hidden');
-      document.getElementById(`nav-${tabId}`).classList.replace('text-gray-400', 'text-blue-600');
-    }
-
-    window.onload = checkAuth;
-  </script>
-</body>
-</html>
+        gstin: document.getElementById("prof-gstin").value.trim(),
+        
