@@ -56,13 +56,15 @@
     </div>
   </div>
 
-  <!-- 🏠 TAB 1: BILLING COUNTER -->
+  <!-- ==================================================== -->
+  <!-- 🏠 TAB 1: BILLING COUNTER                            -->
+  <!-- ==================================================== -->
   <div id="tab-billing" class="flex-1 flex flex-col overflow-hidden">
     <div class="relative w-full bg-slate-900 flex-shrink-0 flex flex-col items-center justify-center p-2 min-h-[160px]">
-      <div id="reader" class="w-full max-w-xs rounded-xl overflow-hidden shadow-inner"></div>
+      <div id="billing-reader" class="w-full max-w-xs rounded-xl overflow-hidden shadow-inner"></div>
       
-      <div id="camera-ctrl-bar" class="w-full flex justify-between items-center px-2 mt-1">
-        <button id="btn-toggle-cam" onclick="toggleCamera()" class="bg-blue-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow active:scale-95">
+      <div class="w-full flex justify-between items-center px-2 mt-1">
+        <button id="btn-toggle-cam-bill" onclick="toggleBillingCamera()" class="bg-blue-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow active:scale-95">
           📷 Camera Chalu Karein
         </button>
         <button onclick="refreshLocalCache()" class="bg-gray-800 text-gray-200 text-xs px-2.5 py-1.5 rounded-lg border border-gray-700">
@@ -104,32 +106,56 @@
     </div>
   </div>
 
-  <!-- 📦 TAB 2: INVENTORY -->
+  <!-- ==================================================== -->
+  <!-- 📦 TAB 2: INVENTORY (QTY & SCANNER)                  -->
+  <!-- ==================================================== -->
   <div id="tab-products" class="flex-1 flex flex-col p-4 overflow-y-auto hidden">
-    <h2 class="text-xl font-bold text-gray-900 mb-3">📦 Naya Samaan Add Karein</h2>
+    <div class="flex justify-between items-center mb-3">
+      <h2 class="text-xl font-bold text-gray-900">📦 Samaan & Stock</h2>
+      <button onclick="toggleInvCamera()" id="btn-toggle-cam-inv" class="bg-indigo-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow active:scale-95 flex items-center gap-1">
+        📷 Scan Barcode
+      </button>
+    </div>
+
+    <!-- Camera Viewport for Inventory -->
+    <div id="inv-reader-box" class="w-full bg-slate-900 rounded-2xl p-2 mb-3 hidden flex flex-col items-center">
+      <div id="inv-reader" class="w-full max-w-xs rounded-xl overflow-hidden"></div>
+      <p class="text-[11px] text-gray-300 mt-1">Barcode frame me layein (Auto fill ho jayega)</p>
+    </div>
+
     <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 mb-4 space-y-3">
       <div>
         <label class="text-xs text-gray-500 font-semibold">Barcode / Item Code</label>
-        <input id="inv-code" type="text" placeholder="Scan ya Type Karein" class="w-full p-2.5 border rounded-xl mt-1 text-sm" />
+        <div class="flex gap-2 mt-1">
+          <input id="inv-code" type="text" placeholder="Scan ya Type Karein" class="flex-1 p-2.5 border rounded-xl text-sm" onblur="checkAutoFillDetails()" />
+        </div>
       </div>
       <div>
         <label class="text-xs text-gray-500 font-semibold">Samaan Ka Naam</label>
         <input id="inv-name" type="text" placeholder="Jaise: Soap, Oil, Lights" class="w-full p-2.5 border rounded-xl mt-1 text-sm" />
       </div>
-      <div>
-        <label class="text-xs text-gray-500 font-semibold">Selling Price (₹)</label>
-        <input id="inv-price" type="number" placeholder="Daam (₹)" class="w-full p-2.5 border rounded-xl mt-1 text-sm" />
+      <div class="grid grid-cols-2 gap-2">
+        <div>
+          <label class="text-xs text-gray-500 font-semibold">Selling Price (₹)</label>
+          <input id="inv-price" type="number" placeholder="Daam (₹)" class="w-full p-2.5 border rounded-xl mt-1 text-sm" />
+        </div>
+        <div>
+          <label class="text-xs text-gray-500 font-semibold">Stock Qty (Pcs)</label>
+          <input id="inv-qty" type="number" placeholder="Kitna piece hai" class="w-full p-2.5 border rounded-xl mt-1 text-sm" />
+        </div>
       </div>
       <button onclick="saveProduct()" class="w-full bg-blue-600 text-white font-bold py-3 rounded-xl active:scale-95 transition shadow">
-        💾 Save Samaan
+        💾 Save Samaan & Stock
       </button>
     </div>
 
-    <h3 class="text-sm font-bold text-gray-700 mb-2">Saved Samaan List</h3>
+    <h3 class="text-sm font-bold text-gray-700 mb-2">Saved Samaan & Balance Stock</h3>
     <div id="product-list-container" class="space-y-2 flex-1"></div>
   </div>
 
-  <!-- ⚙️ TAB 3: PROFILE SETUP -->
+  <!-- ==================================================== -->
+  <!-- ⚙️ TAB 3: PROFILE SETUP                              -->
+  <!-- ==================================================== -->
   <div id="tab-settings" class="flex-1 flex flex-col p-4 overflow-y-auto hidden">
     <h2 class="text-xl font-bold text-gray-900 mb-3">🏪 Dukan Profile Setup</h2>
     
@@ -220,7 +246,7 @@
     </div>
   </div>
 
-  <!-- 🔢 QUANTITY MODAL -->
+  <!-- 🔢 EDIT QUANTITY MODAL -->
   <div id="qty-modal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 hidden">
     <div class="bg-white rounded-2xl p-5 w-64 text-center shadow-xl">
       <h3 class="font-bold text-gray-800 mb-1" id="qty-item-name">Product</h3>
@@ -262,8 +288,10 @@
     let inventory = JSON.parse(localStorage.getItem("cached_inventory") || "[]");
     let cart = {};
     let editingCode = null;
-    let html5QrCode = null;
-    let isCameraRunning = false;
+    let billingScanner = null;
+    let invScanner = null;
+    let isBillingCamRunning = false;
+    let isInvCamRunning = false;
 
     async function checkAuth() {
       if (!currentClientKey) {
@@ -329,7 +357,7 @@
     }
 
     function refreshLocalCache() {
-      syncFromCloud().then(() => alert("Samaan list sync ho gayi!"));
+      syncFromCloud().then(() => alert("Samaan & Stock list sync ho gayi!"));
     }
 
     function populateProfileInputs() {
@@ -358,14 +386,15 @@
       setTimeout(() => { st.innerText = ""; }, 2000);
     }
 
-    async function toggleCamera() {
-      const btn = document.getElementById("btn-toggle-cam");
-      if (isCameraRunning) {
-        if (html5QrCode) {
-          await html5QrCode.stop();
-          html5QrCode.clear();
+    // --- BILLING CAMERA SCANNER ---
+    async function toggleBillingCamera() {
+      const btn = document.getElementById("btn-toggle-cam-bill");
+      if (isBillingCamRunning) {
+        if (billingScanner) {
+          await billingScanner.stop();
+          billingScanner.clear();
         }
-        isCameraRunning = false;
+        isBillingCamRunning = false;
         btn.innerText = "📷 Camera Chalu Karein";
         btn.className = "bg-blue-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow active:scale-95";
         return;
@@ -373,21 +402,71 @@
 
       btn.innerText = "⏳ Loading...";
       try {
-        html5QrCode = new Html5Qrcode("reader");
-        await html5QrCode.start(
+        billingScanner = new Html5Qrcode("billing-reader");
+        await billingScanner.start(
           { facingMode: "environment" },
           { fps: 15, qrbox: { width: 220, height: 130 } },
           (decodedText) => {
             handleScannedCode(decodedText);
           }
         );
-        isCameraRunning = true;
+        isBillingCamRunning = true;
         btn.innerText = "⏹ Camera Band Karein";
         btn.className = "bg-red-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow active:scale-95";
       } catch (err) {
-        alert("Camera chalu nahi hua. Kripya permission allow karein ya manual code add karein.");
+        alert("Camera permission allow karein.");
         btn.innerText = "📷 Camera Chalu Karein";
-        isCameraRunning = false;
+        isBillingCamRunning = false;
+      }
+    }
+
+    // --- INVENTORY CAMERA SCANNER ---
+    async function toggleInvCamera() {
+      const box = document.getElementById("inv-reader-box");
+      const btn = document.getElementById("btn-toggle-cam-inv");
+
+      if (isInvCamRunning) {
+        if (invScanner) {
+          await invScanner.stop();
+          invScanner.clear();
+        }
+        isInvCamRunning = false;
+        box.classList.add("hidden");
+        btn.innerText = "📷 Scan Barcode";
+        btn.className = "bg-indigo-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow active:scale-95 flex items-center gap-1";
+        return;
+      }
+
+      box.classList.remove("hidden");
+      btn.innerText = "⏹ Band Karein";
+      btn.className = "bg-red-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow active:scale-95 flex items-center gap-1";
+
+      try {
+        invScanner = new Html5Qrcode("inv-reader");
+        await invScanner.start(
+          { facingMode: "environment" },
+          { fps: 15, qrbox: { width: 220, height: 130 } },
+          (decodedText) => {
+            document.getElementById("inv-code").value = decodedText.trim();
+            checkAutoFillDetails();
+            toggleInvCamera(); // auto stop after scan
+          }
+        );
+        isInvCamRunning = true;
+      } catch (err) {
+        alert("Camera start nahi hua.");
+        toggleInvCamera();
+      }
+    }
+
+    function checkAutoFillDetails() {
+      const code = document.getElementById("inv-code").value.trim();
+      if (!code) return;
+      const exist = inventory.find(i => i["Item Code"] === code);
+      if (exist) {
+        document.getElementById("inv-name").value = exist["Item Name"] || "";
+        document.getElementById("inv-price").value = exist["Price"] || "";
+        document.getElementById("inv-qty").value = exist["Quantity"] || 0;
       }
     }
 
@@ -414,20 +493,37 @@
 
     function addToCart(product) {
       const code = product["Item Code"];
+      const currentInCart = cart[code] ? cart[code].qty : 0;
+      const stockAvailable = parseFloat(product["Quantity"]) || 0;
+
+      if (stockAvailable > 0 && currentInCart >= stockAvailable) {
+        alert(`Stock khatam! Is samaan ka sirf ${stockAvailable} piece bacha hai.`);
+        return;
+      }
+
       if (cart[code]) cart[code].qty += 1;
       else cart[code] = { name: product["Item Name"], price: product["Price"], qty: 1 };
       renderCart();
     }
 
+    // --- INVENTORY MANAGEMENT (QTY & BALANCE) ---
     async function saveProduct() {
       const code = document.getElementById("inv-code").value.trim();
       const name = document.getElementById("inv-name").value.trim();
       const price = parseFloat(document.getElementById("inv-price").value) || 0;
+      const qty = parseFloat(document.getElementById("inv-qty").value) || 0;
+
       if (!code || !name || price <= 0) {
         alert("Barcode, Naam aur Price bharein!");
         return;
       }
-      const newItem = { client_key: currentClientKey, "Item Code": code, "Item Name": name, "Price": price };
+      const newItem = { 
+        client_key: currentClientKey, 
+        "Item Code": code, 
+        "Item Name": name, 
+        "Price": price,
+        "Quantity": qty
+      };
       
       const existingIdx = inventory.findIndex(i => i["Item Code"] === code);
       if (existingIdx >= 0) inventory[existingIdx] = newItem;
@@ -438,9 +534,10 @@
       document.getElementById("inv-code").value = "";
       document.getElementById("inv-name").value = "";
       document.getElementById("inv-price").value = "";
+      document.getElementById("inv-qty").value = "";
 
       await db.table("inventory").upsert(newItem, { onConflict: "client_key,Item Code" });
-      alert("Samaan save ho gaya!");
+      alert("Samaan aur Stock save ho gaya!");
     }
 
     function renderProductList() {
@@ -449,22 +546,33 @@
         container.innerHTML = `<div class="text-center text-gray-400 text-xs py-4">Abhi tak koi samaan add nahi hua hai.</div>`;
         return;
       }
-      container.innerHTML = inventory.map(item => `
-        <div class="bg-white p-3 rounded-xl border border-gray-100 flex justify-between items-center text-sm shadow-sm">
-          <div>
-            <p class="font-bold text-gray-800">${item["Item Name"]}</p>
-            <p class="text-xs text-gray-400">Code: ${item["Item Code"]}</p>
+      container.innerHTML = inventory.map(item => {
+        const qty = parseFloat(item["Quantity"]) || 0;
+        const qtyBadge = qty <= 3 
+          ? `<span class="bg-red-100 text-red-700 text-[10px] px-2 py-0.5 rounded-full font-bold">Stock: ${qty} pcs</span>`
+          : `<span class="bg-emerald-100 text-emerald-700 text-[10px] px-2 py-0.5 rounded-full font-bold">Stock: ${qty} pcs</span>`;
+
+        return `
+          <div class="bg-white p-3 rounded-xl border border-gray-100 flex justify-between items-center text-sm shadow-sm">
+            <div>
+              <p class="font-bold text-gray-800">${item["Item Name"]}</p>
+              <div class="flex items-center gap-2 mt-1">
+                <span class="text-xs text-gray-400">Code: ${item["Item Code"]}</span>
+                ${qtyBadge}
+              </div>
+            </div>
+            <span class="font-bold text-gray-900 text-base">₹${item["Price"]}</span>
           </div>
-          <span class="font-bold text-gray-900">₹${item["Price"]}</span>
-        </div>
-      `).join("");
+        `;
+      }).join("");
     }
 
+    // --- CART & BILLING ---
     function renderCart() {
       const container = document.getElementById("cart-container");
       const codes = Object.keys(cart);
       if (codes.length === 0) {
-        container.innerHTML = `<div class="text-center text-gray-400 mt-10 text-sm">Koi samaan add nahi hua.<br>Camera se scan karein ya code likhein!</div>`;
+        container.innerHTML = `<div class="text-center text-gray-400 mt-10 text-sm">Koi samaan add nahi hua.<br>Camera scan karein ya code likhein!</div>`;
         document.getElementById("grand-total").innerText = "₹0.00";
         return;
       }
@@ -506,6 +614,14 @@
     function changeQty(diff) {
       let val = parseInt(document.getElementById("qty-value").innerText) + diff;
       if (val < 1) val = 1;
+
+      if (editingCode) {
+        const prod = inventory.find(p => p["Item Code"] === editingCode);
+        if (prod && prod["Quantity"] && val > parseFloat(prod["Quantity"])) {
+          alert(`Stock me sirf ${prod["Quantity"]} piece uplabdh hai.`);
+          return;
+        }
+      }
       document.getElementById("qty-value").innerText = val;
     }
 
@@ -517,6 +633,7 @@
       document.getElementById("qty-modal").classList.add("hidden");
     }
 
+    // --- PAYMENT, RECEIPT & STOCK DEDUCTION ---
     function openPaymentQR() {
       const codes = Object.keys(cart);
       if (codes.length === 0) {
@@ -551,7 +668,7 @@
       document.getElementById("qr-modal").classList.add("hidden");
     }
 
-    function checkout(mode) {
+    async function checkout(mode) {
       closeQRModal();
       const codes = Object.keys(cart);
       if (codes.length === 0) return;
@@ -559,6 +676,24 @@
       const totalAmount = document.getElementById("grand-total").innerText;
       const invNo = "INV-" + Math.floor(100000 + Math.random() * 900000);
       const dateStr = new Date().toLocaleString("en-IN");
+
+      // Auto deduct quantity from inventory
+      for (const code of codes) {
+        const prod = inventory.find(p => p["Item Code"] === code);
+        if (prod) {
+          const currentQty = parseFloat(prod["Quantity"]) || 0;
+          const soldQty = cart[code].qty;
+          const updatedQty = Math.max(0, currentQty - soldQty);
+          prod["Quantity"] = updatedQty;
+
+          // update cloud in background
+          db.table("inventory").update({ "Quantity": updatedQty })
+            .eq("client_key", currentClientKey)
+            .eq("Item Code", code).then();
+        }
+      }
+      localStorage.setItem("cached_inventory", JSON.stringify(inventory));
+      renderProductList();
 
       document.getElementById("rec-store-name").innerText = profileData.store_name || "MY STORE";
       document.getElementById("rec-store-address").innerText = profileData.address || "";
@@ -601,6 +736,9 @@
     }
 
     function switchTab(tabId) {
+      if (tabId !== 'billing' && isBillingCamRunning) toggleBillingCamera();
+      if (tabId !== 'products' && isInvCamRunning) toggleInvCamera();
+
       ['billing', 'products', 'settings'].forEach(t => {
         document.getElementById(`tab-${t}`).classList.add('hidden');
         document.getElementById(`nav-${t}`).classList.replace('text-blue-600', 'text-gray-400');
